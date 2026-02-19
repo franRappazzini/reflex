@@ -52,13 +52,13 @@ impl<'a> TryFrom<&'a [u8]> for InitializeData {
         require_eq_len!(data.len(), size_of::<InitializeData>());
 
         let fee_bps = u16::from_le_bytes(
-            data[0..8]
+            data[0..2]
                 .try_into()
                 .map_err(|_| ProgramError::InvalidInstructionData)?,
         );
 
         let briber_fee_bps = u16::from_le_bytes(
-            data[8..16]
+            data[2..4]
                 .try_into()
                 .map_err(|_| ProgramError::InvalidInstructionData)?,
         );
