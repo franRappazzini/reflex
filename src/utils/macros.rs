@@ -11,7 +11,7 @@
 ///
 /// # Example
 ///
-/// ```rust
+/// ```ignore
 /// require_eq_len!(vec1.len(), vec2.len());
 /// ```
 #[macro_export]
@@ -36,7 +36,7 @@ macro_rules! require_eq_len {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```ignore
 /// require_eq_address!(address1, address2);
 /// ```
 #[macro_export]

@@ -20,7 +20,7 @@ nostd_panic_handler!();
 no_allocator!();
 program_entrypoint!(process_entrypoint);
 
-pinocchio::address::declare_id!("AxXTVNh3eDefaL8F6RVXMKXss77tgUi8MZHQAGrQX5db");
+pinocchio::address::declare_id!("7zogcJaEsucGbcnZz4o4ARRbeF8AUU1RUP7zsAJ68wK7");
 
 fn process_entrypoint(
     _program_id: &Address,

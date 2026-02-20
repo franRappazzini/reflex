@@ -85,8 +85,11 @@ impl<'a> Initialize<'a> {
     pub const DISCRIMINATOR: &'a u8 = &0;
 
     pub fn process(&self) -> ProgramResult {
-        let bump_binding = &self.accounts.bump.to_le_bytes();
-        let seeds = [Seed::from(constants::CONFIG_SEED), Seed::from(bump_binding)];
+        let bump_binding = [self.accounts.bump];
+        let seeds = [
+            Seed::from(constants::CONFIG_SEED),
+            Seed::from(&bump_binding),
+        ];
 
         Account::init_pda::<Config>(self.accounts.authority, self.accounts.config, &seeds)?;
 
