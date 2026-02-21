@@ -7,7 +7,8 @@ pub enum ReflexError {
     InvalidAccountSize,
     #[error("The accounts are not equals")]
     InvalidAddress,
-    
+    #[error("The outcome mint account is not valid")]
+    InvalidOutcomeMint,
 }
 
 impl From<ReflexError> for ProgramError {
@@ -29,6 +30,7 @@ impl TryFrom<u32> for ReflexError {
         match error {
             0 => Ok(ReflexError::InvalidAccountSize),
             1 => Ok(ReflexError::InvalidAddress),
+            2 => Ok(ReflexError::InvalidOutcomeMint),
             _ => Err(ProgramError::InvalidArgument),
         }
     }
@@ -46,6 +48,7 @@ impl ToStr for ReflexError {
         match self {
             ReflexError::InvalidAccountSize => "Error: The size accounts do not match",
             ReflexError::InvalidAddress => "Error: The accounts are not equals",
+            ReflexError::InvalidOutcomeMint => "Error: The outcome mint account is not valid",
         }
     }
 }

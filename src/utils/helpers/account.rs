@@ -8,7 +8,7 @@ use pinocchio_system::instructions::CreateAccount;
 
 pub struct Account;
 impl Account {
-    pub fn _program_account_check(account: &AccountView) -> ProgramResult {
+    pub fn program_account_check(account: &AccountView) -> ProgramResult {
         if !account.owned_by(&crate::ID) {
             return Err(ProgramError::InvalidAccountOwner);
         }
@@ -54,5 +54,16 @@ impl Account {
             owner: &crate::ID,
         }
         .invoke_signed(&signer_seeds)
+    }
+
+    pub fn init_if_needed<T>(
+        account: &AccountView,
+        from: &AccountView,
+        seeds: &[Seed],
+    ) -> ProgramResult {
+        match Self::program_account_check(account) {
+            Ok(_) => Ok(()),
+            Err(_) => Self::init_pda::<T>(from, account, seeds),
+        }
     }
 }

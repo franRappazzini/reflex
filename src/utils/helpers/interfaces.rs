@@ -6,7 +6,7 @@ use pinocchio::{
 };
 use pinocchio_system::instructions::CreateAccount;
 
-use crate::{errors::ReflexError, require_eq_len};
+use crate::{errors::ReflexError, require_eq_address, require_eq_len};
 
 // TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb
 pub const TOKEN_2022_PROGRAM_ID: [u8; 32] = [
@@ -39,8 +39,19 @@ impl MintInterface {
         Ok(())
     }
 
-    pub fn transfer() -> ProgramResult {
-        Ok(())
+    pub fn transfer(
+        from: &AccountView,
+        to: &AccountView,
+        authority: &AccountView,
+        amount: u64,
+    ) -> ProgramResult {
+        pinocchio_token::instructions::Transfer {
+            from,
+            to,
+            authority,
+            amount,
+        }
+        .invoke()
     }
 }
 
@@ -71,10 +82,44 @@ impl TokenAcocuntInterface {
         Ok(())
     }
 
+    pub fn token_account_check(
+        account: &AccountView,   // treasury
+        authority: &AccountView, // config
+        mint: &AccountView,
+    ) -> ProgramResult {
+        let ata = pinocchio_token::state::TokenAccount::from_account_view(account)?;
+        require_eq_address!(ata.owner(), authority.address());
+        require_eq_address!(ata.mint(), mint.address());
+
+        Ok(())
+    }
+
+    pub fn ata_check(
+        account: &AccountView,
+        owner: &AccountView,
+        mint: &AccountView,
+        token_program: &AccountView,
+    ) -> ProgramResult {
+        require_eq_address!(
+            &Address::find_program_address(
+                &[
+                    owner.address().as_ref(),
+                    token_program.address().as_ref(),
+                    mint.address().as_ref(),
+                ],
+                &pinocchio_associated_token_account::ID
+            )
+            .0,
+            account.address()
+        );
+
+        Ok(())
+    }
+
     pub fn init_with_seeds(
         account: &AccountView,
         payer: &AccountView,
-        owner: &Address,
+        owner: &AccountView,
         mint: &AccountView,
         token_program: &AccountView,
         seeds: &[Seed],
@@ -96,7 +141,7 @@ impl TokenAcocuntInterface {
         pinocchio_token::instructions::InitializeAccount3 {
             account,
             mint,
-            owner,
+            owner: owner.address(),
         }
         .invoke()
     }

@@ -1,7 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 
 #[cfg(test)]
-mod test;
+mod tests;
 
 mod constants;
 mod errors;
@@ -14,7 +14,7 @@ use pinocchio::{
     Address, ProgramResult,
 };
 
-use crate::instructions::Initialize;
+use crate::instructions::{CreateMarketVault, Initialize, StakeOutcomeToken};
 
 nostd_panic_handler!();
 no_allocator!();
@@ -30,6 +30,12 @@ fn process_entrypoint(
     match data.split_first() {
         Some((Initialize::DISCRIMINATOR, data)) => {
             Initialize::try_from((data, accounts))?.process()
+        }
+        Some((CreateMarketVault::DISCRIMINATOR, data)) => {
+            CreateMarketVault::try_from((data, accounts))?.process()
+        }
+        Some((StakeOutcomeToken::DISCRIMINATOR, data)) => {
+            StakeOutcomeToken::try_from((data, accounts))?.process()
         }
         _ => Err(ProgramError::InvalidInstructionData),
     }

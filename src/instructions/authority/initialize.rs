@@ -151,7 +151,7 @@ impl<'a> Initialize<'a> {
         TokenAcocuntInterface::init_with_seeds(
             self.accounts.wsol_treasury,
             self.accounts.authority,
-            self.accounts.config.address(),
+            self.accounts.config,
             self.accounts.wsol_mint,
             self.accounts.token_program,
             &seeds,
@@ -168,7 +168,7 @@ impl<'a> Initialize<'a> {
         TokenAcocuntInterface::init_with_seeds(
             self.accounts.usdc_treasury,
             self.accounts.authority,
-            self.accounts.config.address(),
+            self.accounts.config,
             self.accounts.usdc_mint,
             self.accounts.token_program,
             &seeds,
