@@ -48,11 +48,10 @@ impl<'a> TryFrom<&'a [AccountView]> for CreateMarketVaultAccounts<'a> {
         Account::signer_check(briber)?;
         Account::program_account_check(config)?;
         MintInterface::check(incentive_mint)?; // TODO: check usdc/wsol
-        TokenAcocuntInterface::token_account_check(treasury, config, incentive_mint)?;
         Account::not_initialized_check(market_vault)?;
         MintInterface::check(outcome_yes_mint)?;
         MintInterface::check(outcome_no_mint)?;
-        TokenAcocuntInterface::check(briber_ata)?;
+        TokenAcocuntInterface::ata_check(briber_ata, briber, incentive_mint, token_program)?;
         Account::not_initialized_check(market_vault_treasury)?;
         Account::not_initialized_check(outcome_yes_vault)?;
         Account::not_initialized_check(outcome_no_vault)?;
@@ -95,6 +94,13 @@ impl<'a> TryFrom<&'a [AccountView]> for CreateMarketVaultAccounts<'a> {
             market_vault_treasury.address()
         );
 
+        let (treasury_address, _) = Address::find_program_address(
+            &[constants::TREASURY_SEED, &incentive_mint.address().as_ref()],
+            &crate::ID,
+        );
+
+        require_eq_address!(&treasury_address, treasury.address());
+
         Ok(Self {
             briber,
             config,
@@ -126,6 +132,10 @@ impl<'a> TryFrom<&'a [u8]> for CreateMarketVaultData {
                 .try_into()
                 .map_err(|_| ProgramError::InvalidInstructionData)?,
         );
+
+        if amount == 0 {
+            return Err(ProgramError::InvalidInstructionData);
+        }
 
         Ok(Self { amount })
     }
@@ -222,22 +232,6 @@ impl<'a> CreateMarketVault<'a> {
             &seeds,
         )?;
 
-        // transfer incentive fee to program treasury
-        MintInterface::transfer(
-            self.accounts.briber_ata,
-            self.accounts.treasury,
-            self.accounts.briber,
-            fee_calculation(self.data.amount, config.fee_bps())?, // fee calculation
-        )?;
-
-        // transfer incentive rewards to market treasury
-        MintInterface::transfer(
-            self.accounts.briber_ata,
-            self.accounts.market_vault_treasury,
-            self.accounts.briber,
-            self.data.amount,
-        )?;
-
         // set market vault
         let mut market_vault_data = self.accounts.market_vault.try_borrow_mut()?;
         let market_vault = MarketVault::load_mut(&mut market_vault_data)?;
@@ -253,6 +247,20 @@ impl<'a> CreateMarketVault<'a> {
             self.data.amount,
         );
 
-        Ok(())
+        // transfer incentive fee to program treasury
+        MintInterface::transfer(
+            self.accounts.briber_ata,
+            self.accounts.treasury,
+            self.accounts.briber,
+            fee_calculation(self.data.amount, config.fee_bps())?, // fee calculation
+        )?;
+
+        // transfer incentive rewards to market treasury
+        MintInterface::transfer(
+            self.accounts.briber_ata,
+            self.accounts.market_vault_treasury,
+            self.accounts.briber,
+            self.data.amount,
+        )
     }
 }

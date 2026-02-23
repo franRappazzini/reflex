@@ -56,4 +56,22 @@ impl FarmerPosition {
             .to_le_bytes();
         Ok(())
     }
+
+    #[inline(always)]
+    pub fn sub_yes_staked(&mut self, amount: u64) -> ProgramResult {
+        self.yes_staked = u64::from_le_bytes(self.yes_staked)
+            .checked_sub(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?
+            .to_le_bytes();
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn sub_no_staked(&mut self, amount: u64) -> ProgramResult {
+        self.no_staked = u64::from_le_bytes(self.no_staked)
+            .checked_sub(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?
+            .to_le_bytes();
+        Ok(())
+    }
 }

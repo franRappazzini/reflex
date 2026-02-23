@@ -1,5 +1,5 @@
 use super::super::test_helpers::{create_ata, create_mint};
-use super::initialize::InitializeResult;
+use super::initialize_test::InitializeResult;
 use crate::constants;
 use mollusk_svm::result::Check;
 use solana_account::Account;
@@ -19,6 +19,7 @@ pub struct MarketVaultResult {
     pub briber_account: Account,
     pub briber_ata_address: Address,
     pub briber_ata_account: Account,
+    pub market_incentive_vault_address: Address,
 }
 
 pub fn run_create_market_vault(init: &mut InitializeResult) -> MarketVaultResult {
@@ -139,5 +140,6 @@ pub fn run_create_market_vault(init: &mut InitializeResult) -> MarketVaultResult
         briber_account,
         briber_ata_address,
         briber_ata_account,
+        market_incentive_vault_address: market_vault_treasury_address,
     }
 }

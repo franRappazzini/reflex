@@ -14,7 +14,9 @@ use pinocchio::{
     Address, ProgramResult,
 };
 
-use crate::instructions::{CreateMarketVault, Initialize, StakeOutcomeToken};
+use crate::instructions::{
+    AddIncentives, CreateMarketVault, Initialize, StakeOutcomeToken, UnstakeOutcomeToken,
+};
 
 nostd_panic_handler!();
 no_allocator!();
@@ -36,6 +38,12 @@ fn process_entrypoint(
         }
         Some((StakeOutcomeToken::DISCRIMINATOR, data)) => {
             StakeOutcomeToken::try_from((data, accounts))?.process()
+        }
+        Some((UnstakeOutcomeToken::DISCRIMINATOR, data)) => {
+            UnstakeOutcomeToken::try_from((data, accounts))?.process()
+        }
+        Some((AddIncentives::DISCRIMINATOR, data)) => {
+            AddIncentives::try_from((data, accounts))?.process()
         }
         _ => Err(ProgramError::InvalidInstructionData),
     }

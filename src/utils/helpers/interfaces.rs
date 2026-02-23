@@ -53,6 +53,24 @@ impl MintInterface {
         }
         .invoke()
     }
+
+    pub fn transfer_signed(
+        from: &AccountView,
+        to: &AccountView,
+        authority: &AccountView,
+        amount: u64,
+        seeds: &[Seed],
+    ) -> ProgramResult {
+        let signer_seeds = [Signer::from(seeds)];
+
+        pinocchio_token::instructions::Transfer {
+            from,
+            to,
+            authority,
+            amount,
+        }
+        .invoke_signed(&signer_seeds)
+    }
 }
 
 pub struct TokenAcocuntInterface;

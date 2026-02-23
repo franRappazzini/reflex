@@ -5,7 +5,7 @@ use crate::{
     errors::ReflexError,
     require_eq_address, require_eq_len,
     states::{FarmerPosition, MarketVault},
-    utils::{fee_calculation, Account, MintInterface, TokenAcocuntInterface},
+    utils::{fee_calculation, Account, MintInterface},
 };
 
 pub struct StakeOutcomeToken<'a> {
@@ -31,7 +31,7 @@ impl<'a> TryFrom<&'a [AccountView]> for StakeOutcomeTokenAccounts<'a> {
     type Error = ProgramError;
 
     fn try_from(accounts: &'a [AccountView]) -> Result<Self, Self::Error> {
-        let [farmer, market_vault, farmer_position, outcome_mint, market_outcome_vault, farmer_outcome_ata, token_program, _system_program] =
+        let [farmer, market_vault, farmer_position, outcome_mint, market_outcome_vault, farmer_outcome_ata, _token_program, _system_program] =
             accounts
         else {
             return Err(ProgramError::InvalidAccountData);
@@ -39,13 +39,6 @@ impl<'a> TryFrom<&'a [AccountView]> for StakeOutcomeTokenAccounts<'a> {
 
         Account::signer_check(farmer)?;
         Account::program_account_check(market_vault)?;
-        MintInterface::check(outcome_mint)?;
-        TokenAcocuntInterface::token_account_check(
-            market_outcome_vault,
-            market_vault,
-            outcome_mint,
-        )?;
-        TokenAcocuntInterface::ata_check(farmer_outcome_ata, farmer, outcome_mint, token_program)?;
 
         let (farmer_position_address, farmer_position_bump) = Address::find_program_address(
             &[

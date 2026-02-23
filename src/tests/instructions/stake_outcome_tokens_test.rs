@@ -1,15 +1,27 @@
 use super::super::test_helpers::create_ata;
-use super::create_market_vault::MarketVaultResult;
+use super::create_market_vault_test::MarketVaultResult;
 use crate::constants;
 use mollusk_svm::result::Check;
 use solana_account::Account;
 use solana_address::Address;
 use solana_instruction::{AccountMeta, Instruction};
 
+pub struct StakeOutcomeTokensResult {
+    pub result: mollusk_svm::result::InstructionResult,
+    pub farmer: Address,
+    pub farmer_position: Address,
+    pub farmer_yes_ata: Address,
+    pub market_address: Address,
+    pub yes_mint_address: Address,
+    pub no_mint_address: Address,
+    pub market_yes_vault: Address,
+    // pub market_no_vault: Address,
+}
+
 pub fn run_stake_outcome_tokens(
-    init: &mut crate::tests::instructions::initialize::InitializeResult,
+    init: &mut crate::tests::instructions::initialize_test::InitializeResult,
     market: &MarketVaultResult,
-) {
+) -> StakeOutcomeTokensResult {
     let farmer = Address::new_unique();
     let farmer_account = Account::new(100_000_000_000, 0, &init.system_program);
 
@@ -80,6 +92,18 @@ pub fn run_stake_outcome_tokens(
         ),
     ];
 
-    init.mollusk
+    let result = init
+        .mollusk
         .process_and_validate_instruction(&ix, &accounts, &[Check::success()]);
+
+    StakeOutcomeTokensResult {
+        result,
+        farmer,
+        farmer_position: farmer_position_address,
+        farmer_yes_ata: farmer_yes_ata_address,
+        market_address: market.market_vault_address,
+        yes_mint_address: market.outcome_yes_mint_address,
+        no_mint_address: market.outcome_no_mint_address,
+        market_yes_vault: market.outcome_yes_vault_address,
+    }
 }

@@ -95,6 +95,24 @@ impl MarketVault {
     }
 
     #[inline(always)]
+    pub fn sub_total_yes_staked(&mut self, amount: u64) -> ProgramResult {
+        self.total_yes_staked = u64::from_le_bytes(self.total_yes_staked)
+            .checked_sub(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?
+            .to_le_bytes();
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn sub_total_no_staked(&mut self, amount: u64) -> ProgramResult {
+        self.total_no_staked = u64::from_le_bytes(self.total_no_staked)
+            .checked_sub(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?
+            .to_le_bytes();
+        Ok(())
+    }
+
+    #[inline(always)]
     pub fn add_total_yes_fees(&mut self, amount: u64) -> ProgramResult {
         self.total_yes_fees = u64::from_le_bytes(self.total_yes_fees)
             .checked_add(amount)
@@ -111,9 +129,24 @@ impl MarketVault {
             .to_le_bytes();
         Ok(())
     }
+
+    #[inline(always)]
+    pub fn add_incentives(&mut self, amount: u64) -> ProgramResult {
+        self.total_incentives = u64::from_le_bytes(self.total_incentives)
+            .checked_add(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?
+            .to_le_bytes();
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn is_settled(&self) -> bool {
+        self.status == MarketVaultStatus::Settled
+    }
 }
 
 #[repr(u8)]
+#[derive(PartialEq)]
 pub enum MarketVaultStatus {
     UnOpen = 0,
     Open = 1,
