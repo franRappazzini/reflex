@@ -66,4 +66,17 @@ impl Account {
             Err(_) => Self::init_pda::<T>(from, account, seeds),
         }
     }
+
+    pub fn close(account: &AccountView, destination: &AccountView) -> ProgramResult {
+        {
+            let mut account_data = account.try_borrow_mut()?;
+            account_data[0] = 0xff;
+        }
+
+        destination.set_lamports(destination.lamports() + account.lamports());
+        account.set_lamports(0);
+
+        account.resize(1)?;
+        account.close()
+    }
 }

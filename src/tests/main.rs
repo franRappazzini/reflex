@@ -1,4 +1,6 @@
-use crate::tests::instructions::*;
+use mollusk_svm::result::Check;
+
+use crate::{errors::ReflexError, tests::instructions::*};
 
 #[test]
 fn test_initialize() {
@@ -33,4 +35,24 @@ fn test_add_incentives() {
     let stake = stake_outcome_tokens_test::run_stake_outcome_tokens(&mut init, &market);
     unstake_outcome_tokens_test::run_unstake_outcome_tokens(&mut init, &stake);
     add_incentives_test::run_add_incentives(&mut init, &market);
+}
+
+#[test]
+fn test_cancel_market_fail() {
+    let mut init = initialize_test::run_initialize();
+    let market = create_market_vault_test::run_create_market_vault(&mut init);
+    let stake = stake_outcome_tokens_test::run_stake_outcome_tokens(&mut init, &market);
+    unstake_outcome_tokens_test::run_unstake_outcome_tokens(&mut init, &stake);
+
+    let checks = [Check::err(ReflexError::MarketCanNotBeCancelled.into())];
+    cancel_market_test::run_cancel_market(&mut init, &market, Some(&stake), &checks);
+}
+
+#[test]
+fn test_cancel_market() {
+    let mut init = initialize_test::run_initialize();
+    let market = create_market_vault_test::run_create_market_vault(&mut init);
+
+    let checks = [Check::success()];
+    cancel_market_test::run_cancel_market(&mut init, &market, None, &checks);
 }

@@ -27,7 +27,7 @@ impl MarketVault {
     pub const LEN: usize = size_of::<Self>();
 
     #[inline(always)]
-    pub fn _load(bytes: &[u8]) -> Result<&Self, ProgramError> {
+    pub fn load(bytes: &[u8]) -> Result<&Self, ProgramError> {
         require_eq_len!(bytes.len(), Self::LEN);
 
         // SAFETY: everything is u8 aligned and length checked
@@ -45,6 +45,31 @@ impl MarketVault {
     #[inline(always)]
     pub fn fee_bps(&self) -> u16 {
         u16::from_le_bytes(self.fee_bps)
+    }
+
+    #[inline(always)]
+    pub fn total_yes_staked(&self) -> u64 {
+        u64::from_le_bytes(self.total_yes_staked)
+    }
+
+    #[inline(always)]
+    pub fn total_no_staked(&self) -> u64 {
+        u64::from_le_bytes(self.total_no_staked)
+    }
+
+    #[inline(always)]
+    pub fn total_yes_fees(&self) -> u64 {
+        u64::from_le_bytes(self.total_yes_fees)
+    }
+
+    #[inline(always)]
+    pub fn total_no_fees(&self) -> u64 {
+        u64::from_le_bytes(self.total_no_fees)
+    }
+
+    #[inline(always)]
+    pub fn total_incentives(&self) -> u64 {
+        u64::from_le_bytes(self.total_incentives)
     }
 
     #[inline(always)]

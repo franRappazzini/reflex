@@ -15,7 +15,8 @@ use pinocchio::{
 };
 
 use crate::instructions::{
-    AddIncentives, CreateMarketVault, Initialize, StakeOutcomeToken, UnstakeOutcomeToken,
+    AddIncentives, CancelMarket, CreateMarketVault, Initialize, StakeOutcomeToken,
+    UnstakeOutcomeToken,
 };
 
 nostd_panic_handler!();
@@ -45,6 +46,7 @@ fn process_entrypoint(
         Some((AddIncentives::DISCRIMINATOR, data)) => {
             AddIncentives::try_from((data, accounts))?.process()
         }
+        Some((CancelMarket::DISCRIMINATOR, _)) => CancelMarket::try_from(accounts)?.process(),
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }
