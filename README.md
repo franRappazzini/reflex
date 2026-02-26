@@ -27,7 +27,7 @@ Reflex bridges prediction market liquidity with incentive mechanisms, providing:
 
 ## Architecture
 
-The protocol is built with the Pinocchio framework for optimized Solana program development, ensuring minimal runtime overhead, high security, and maintainability.
+The protocol is built with the Pinocchio for optimized Solana program development, ensuring minimal runtime overhead, high security, and maintainability.
 
 ### Program Structure
 
@@ -111,7 +111,6 @@ The protocol implements a two-tier fee system:
 
 - Rust 1.70 or higher
 - Solana CLI tools
-- Anchor framework (optional, for testing)
 
 ### Build
 
@@ -127,14 +126,14 @@ cargo test-sbf
 
 ## Development
 
-This project is developed with the **Pinocchio** framework, ensuring lightweight, secure, and efficient Solana program development. Testing is performed using **Mollusk**.
+This project is developed with the **Pinocchio**, ensuring lightweight, secure, and efficient Solana program development. Testing is performed using **Mollusk**.
 
 Built with:
 
-- **Pinocchio**: Lightweight Solana program framework
+- **Pinocchio**: Lightweight Solana program
 - **Solana SDK**: Core blockchain functionality
 - **SPL Token**: Token program integration
-- **Mollusk**: Testing and benchmarking framework
+- **Mollusk**: Testing and benchmarking
 
 ## Program ID
 
