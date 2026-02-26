@@ -15,7 +15,7 @@ use pinocchio::{
 };
 
 use crate::instructions::{
-    AddIncentives, CancelMarket, CreateMarketVault, Initialize, StakeOutcomeToken,
+    AddIncentives, CancelMarket, CreateMarketVault, Initialize, SettleMarket, StakeOutcomeToken,
     UnstakeOutcomeToken,
 };
 
@@ -47,6 +47,9 @@ fn process_entrypoint(
             AddIncentives::try_from((data, accounts))?.process()
         }
         Some((CancelMarket::DISCRIMINATOR, _)) => CancelMarket::try_from(accounts)?.process(),
+        Some((SettleMarket::DISCRIMINATOR, data)) => {
+            SettleMarket::try_from((data, accounts))?.process()
+        }
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }

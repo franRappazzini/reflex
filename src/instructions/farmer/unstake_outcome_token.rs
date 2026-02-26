@@ -113,6 +113,11 @@ impl<'a> UnstakeOutcomeToken<'a> {
         {
             let mut market_data = self.accounts.market.try_borrow_mut()?;
             let market = MarketVault::load_mut(&mut market_data)?;
+
+            if market.is_settled() {
+                return Err(ReflexError::MarketWasSetted.into());
+            }
+
             let mut farmer_position_data = self.accounts.farmer_position.try_borrow_mut()?;
             let farmer_position = FarmerPosition::load_mut(&mut farmer_position_data)?;
 

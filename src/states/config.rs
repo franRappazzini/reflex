@@ -15,7 +15,7 @@ impl Config {
     pub const LEN: usize = size_of::<Config>();
 
     #[inline(always)]
-    pub fn _load(bytes: &[u8]) -> Result<&Self, ProgramError> {
+    pub fn load(bytes: &[u8]) -> Result<&Self, ProgramError> {
         require_eq_len!(bytes.len(), Self::LEN);
 
         // SAFETY: everything is u8 aligned and length checked

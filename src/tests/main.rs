@@ -56,3 +56,10 @@ fn test_cancel_market() {
     let checks = [Check::success()];
     cancel_market_test::run_cancel_market(&mut init, &market, None, &checks);
 }
+
+#[test]
+fn test_settle_market() {
+    let mut init = initialize_test::run_initialize();
+    let market = create_market_vault_test::run_create_market_vault(&mut init);
+    settle_market_test::run_settle_market(&mut init, &market);
+}

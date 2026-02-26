@@ -4,6 +4,7 @@ use crate::{errors::ReflexError, require_eq_len};
 
 #[repr(C)]
 pub struct MarketVault {
+    pub market_resolution: MarketVaultResolution,
     pub briber: Address,
     // pub kalshi_market_id: u64,
     pub outcome_yes_mint: Address,
@@ -18,7 +19,6 @@ pub struct MarketVault {
     total_no_fees: [u8; 8],    // u64
     fee_bps: [u8; 2],          // u16
     pub status: MarketVaultStatus,
-    pub market_resolution: MarketVaultResolution,
     pub fees_claimed: bool,
     pub bump: u8,
 }
@@ -102,6 +102,16 @@ impl MarketVault {
     }
 
     #[inline(always)]
+    pub fn set_as_settled(&mut self) {
+        self.status = MarketVaultStatus::Settled;
+    }
+
+    #[inline(always)]
+    pub fn set_resolution(&mut self, resolution: MarketVaultResolution) {
+        self.market_resolution = resolution;
+    }
+
+    #[inline(always)]
     pub fn add_total_yes_staked(&mut self, amount: u64) -> ProgramResult {
         self.total_yes_staked = u64::from_le_bytes(self.total_yes_staked)
             .checked_add(amount)
@@ -179,6 +189,7 @@ pub enum MarketVaultStatus {
 }
 
 #[repr(u8)]
+#[derive(Clone, Copy)]
 pub enum MarketVaultResolution {
     None = 0,
     Yes = 1,

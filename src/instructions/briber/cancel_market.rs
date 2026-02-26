@@ -75,8 +75,9 @@ impl<'a> CancelMarket<'a> {
             // market checks
             require_eq_address!(self.accounts.briber.address(), &market.briber);
 
-            pinocchio_log::log!("market total yes fees: {}", market.total_yes_fees());
-            pinocchio_log::log!("market total no fees: {}", market.total_no_fees());
+            if market.is_settled() {
+                return Err(ReflexError::MarketWasSetted.into());
+            }
 
             if market.total_yes_fees() != 0 || market.total_no_fees() != 0 {
                 return Err(ReflexError::MarketCanNotBeCancelled.into());

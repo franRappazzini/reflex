@@ -98,6 +98,10 @@ impl<'a> StakeOutcomeToken<'a> {
         let mut market_vault_data = self.accounts.market_vault.try_borrow_mut()?;
         let market_vault = MarketVault::load_mut(&mut market_vault_data)?;
 
+        if market_vault.is_settled() {
+            return Err(ReflexError::MarketWasSetted.into());
+        }
+
         if &market_vault.outcome_yes_mint != self.accounts.outcome_mint.address()
             && &market_vault.outcome_no_mint != self.accounts.outcome_mint.address()
         {
