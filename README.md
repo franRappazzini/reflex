@@ -1,6 +1,6 @@
 # Reflex
 
-Reflex is a Solana protocol developed with the Pinocchio, designed to create **incentive vaults** for existing Kalshi prediction markets using dFlow infrastructure. It empowers market participants to earn additional rewards by staking outcome tokens (YES/NO) from Kalshi markets, while ensuring robust security and performance through Pinocchio's optimized Solana program architecture.
+Reflex is a Solana protocol developed with Pinocchio, designed to create **incentive vaults** for existing Kalshi prediction markets using dFlow infrastructure. It empowers market participants to earn additional rewards by staking outcome tokens (YES/NO) from Kalshi markets, while ensuring robust security and performance through Pinocchio's optimized Solana program architecture.
 
 ## Overview
 
@@ -27,7 +27,7 @@ Reflex bridges prediction market liquidity with incentive mechanisms, providing:
 
 ## Architecture
 
-The protocol is built with the Pinocchio for optimized Solana program development, ensuring minimal runtime overhead, high security, and maintainability.
+The protocol is built with Pinocchio for optimized Solana program development, ensuring minimal runtime overhead, high security, and maintainability.
 
 ### Program Structure
 
@@ -126,7 +126,7 @@ cargo test-sbf
 
 ## Development
 
-This project is developed with the **Pinocchio**, ensuring lightweight, secure, and efficient Solana program development. Testing is performed using **Mollusk**.
+This project is developed with **Pinocchio**, ensuring lightweight, secure, and efficient Solana program development. Testing is performed using **Mollusk**.
 
 Built with:
 
