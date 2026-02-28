@@ -63,3 +63,9 @@ fn test_settle_market() {
     let market = create_market_vault_test::run_create_market_vault(&mut init);
     settle_market_test::run_settle_market(&mut init, &market);
 }
+
+#[test]
+fn test_update_config() {
+    let mut init = initialize_test::run_initialize();
+    update_config_test::run_update_config(&mut init);
+}

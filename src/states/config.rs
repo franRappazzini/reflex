@@ -53,6 +53,16 @@ impl Config {
     }
 
     #[inline(always)]
+    pub fn set_fee_bps(&mut self, fee_bps: u16) {
+        self.fee_bps = fee_bps.to_le_bytes();
+    }
+
+    #[inline(always)]
+    pub fn set_briber_fee_bps(&mut self, briber_fee_bps: u16) {
+        self.briber_fee_bps = briber_fee_bps.to_le_bytes();
+    }
+
+    #[inline(always)]
     pub fn add_market_counter(&mut self) -> ProgramResult {
         self.market_counter = u64::from_le_bytes(
             self.market_counter
