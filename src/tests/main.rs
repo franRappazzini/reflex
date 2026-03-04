@@ -78,3 +78,12 @@ fn test_claim_rewards() {
     let settle = settle_market_test::run_settle_market_with_stake(&mut init, &stake);
     claim_rewards_test::run_claim_rewards(&mut init, &market, &stake, &settle);
 }
+
+#[test]
+fn test_claim_fees() {
+    let mut init = initialize_test::run_initialize();
+    let market = create_market_vault_test::run_create_market_vault(&mut init);
+    let stake = stake_outcome_tokens_test::run_stake_outcome_tokens(&mut init, &market);
+    let settle = settle_market_test::run_settle_market_with_stake(&mut init, &stake);
+    claim_fees_test::run_claim_fees(&mut init, &market, &stake, &settle);
+}

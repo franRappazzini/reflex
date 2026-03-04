@@ -15,6 +15,8 @@ pub enum ReflexError {
     MarketWasNotSettled,
     #[error("The market can not be cancelled")]
     MarketCanNotBeCancelled,
+    #[error("The fees have already been claimed")]
+    FeesAlreadyClaimed,
 }
 
 impl From<ReflexError> for ProgramError {
@@ -40,6 +42,7 @@ impl TryFrom<u32> for ReflexError {
             3 => Ok(ReflexError::MarketWasSettled),
             4 => Ok(ReflexError::MarketWasNotSettled),
             5 => Ok(ReflexError::MarketCanNotBeCancelled),
+            6 => Ok(ReflexError::FeesAlreadyClaimed),
             _ => Err(ProgramError::InvalidArgument),
         }
     }
@@ -61,6 +64,7 @@ impl ToStr for ReflexError {
             ReflexError::MarketWasSettled => "Error: The market was settled",
             ReflexError::MarketWasNotSettled => "Error: The market was not settled",
             ReflexError::MarketCanNotBeCancelled => "Error: The market can not be cancelled",
+            ReflexError::FeesAlreadyClaimed => "Error: The fees have already been claimed",
         }
     }
 }
