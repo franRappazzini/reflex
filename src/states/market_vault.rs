@@ -73,6 +73,21 @@ impl MarketVault {
     }
 
     #[inline(always)]
+    pub fn is_resolved_yes(&self) -> bool {
+        self.market_resolution == MarketVaultResolution::Yes
+    }
+
+    #[inline(always)]
+    pub fn is_resolved_no(&self) -> bool {
+        self.market_resolution == MarketVaultResolution::No
+    }
+
+    #[inline(always)]
+    pub fn is_settled(&self) -> bool {
+        self.status == MarketVaultStatus::Settled
+    }
+
+    #[inline(always)]
     pub fn set_inner(
         &mut self,
         id: u64,
@@ -173,11 +188,6 @@ impl MarketVault {
             .to_le_bytes();
         Ok(())
     }
-
-    #[inline(always)]
-    pub fn is_settled(&self) -> bool {
-        self.status == MarketVaultStatus::Settled
-    }
 }
 
 #[repr(u8)]
@@ -189,7 +199,7 @@ pub enum MarketVaultStatus {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum MarketVaultResolution {
     None = 0,
     Yes = 1,

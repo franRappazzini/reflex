@@ -103,7 +103,7 @@ impl<'a> AddIncentives<'a> {
         require_eq_address!(&market.briber, self.accounts.briber.address());
 
         if market.is_settled() {
-            return Err(ReflexError::MarketWasSetted.into());
+            return Err(ReflexError::MarketWasSettled.into());
         }
 
         market.add_incentives(self.data.amount)?;

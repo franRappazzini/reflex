@@ -76,7 +76,7 @@ impl<'a> CancelMarket<'a> {
             require_eq_address!(self.accounts.briber.address(), &market.briber);
 
             if market.is_settled() {
-                return Err(ReflexError::MarketWasSetted.into());
+                return Err(ReflexError::MarketWasSettled.into());
             }
 
             if market.total_yes_fees() != 0 || market.total_no_fees() != 0 {

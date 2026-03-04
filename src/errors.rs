@@ -9,8 +9,10 @@ pub enum ReflexError {
     InvalidAddress,
     #[error("The outcome mint account is not valid")]
     InvalidOutcomeMint,
-    #[error("The market was setted")]
-    MarketWasSetted,
+    #[error("The market was settled")]
+    MarketWasSettled,
+    #[error("The market was not settled")]
+    MarketWasNotSettled,
     #[error("The market can not be cancelled")]
     MarketCanNotBeCancelled,
 }
@@ -35,8 +37,9 @@ impl TryFrom<u32> for ReflexError {
             0 => Ok(ReflexError::InvalidAccountSize),
             1 => Ok(ReflexError::InvalidAddress),
             2 => Ok(ReflexError::InvalidOutcomeMint),
-            3 => Ok(ReflexError::MarketWasSetted),
-            4 => Ok(ReflexError::MarketCanNotBeCancelled),
+            3 => Ok(ReflexError::MarketWasSettled),
+            4 => Ok(ReflexError::MarketWasNotSettled),
+            5 => Ok(ReflexError::MarketCanNotBeCancelled),
             _ => Err(ProgramError::InvalidArgument),
         }
     }
@@ -55,7 +58,8 @@ impl ToStr for ReflexError {
             ReflexError::InvalidAccountSize => "Error: The size accounts do not match",
             ReflexError::InvalidAddress => "Error: The accounts are not equals",
             ReflexError::InvalidOutcomeMint => "Error: The outcome mint account is not valid",
-            ReflexError::MarketWasSetted => "Error: The market was setted",
+            ReflexError::MarketWasSettled => "Error: The market was settled",
+            ReflexError::MarketWasNotSettled => "Error: The market was not settled",
             ReflexError::MarketCanNotBeCancelled => "Error: The market can not be cancelled",
         }
     }

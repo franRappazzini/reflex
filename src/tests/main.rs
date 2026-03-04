@@ -69,3 +69,12 @@ fn test_update_config() {
     let mut init = initialize_test::run_initialize();
     update_config_test::run_update_config(&mut init);
 }
+
+#[test]
+fn test_claim_rewards() {
+    let mut init = initialize_test::run_initialize();
+    let market = create_market_vault_test::run_create_market_vault(&mut init);
+    let stake = stake_outcome_tokens_test::run_stake_outcome_tokens(&mut init, &market);
+    let settle = settle_market_test::run_settle_market_with_stake(&mut init, &stake);
+    claim_rewards_test::run_claim_rewards(&mut init, &market, &stake, &settle);
+}

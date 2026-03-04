@@ -7,15 +7,15 @@ pub struct FarmerPosition {
     pub farmer: Address,
     pub bump: u8,
     pub is_initialized: bool,
-    pub yes_staked: [u8; 8], // u64
-    pub no_staked: [u8; 8],  // u64
+    yes_staked: [u8; 8], // u64
+    no_staked: [u8; 8],  // u64
 }
 
 impl FarmerPosition {
     pub const LEN: usize = size_of::<Self>();
 
     #[inline(always)]
-    pub fn _load(bytes: &[u8]) -> Result<&Self, ProgramError> {
+    pub fn load(bytes: &[u8]) -> Result<&Self, ProgramError> {
         require_eq_len!(bytes.len(), Self::LEN);
 
         // SAFETY: everything is u8 aligned and length checked
@@ -28,6 +28,16 @@ impl FarmerPosition {
 
         // SAFETY: everything is u8 aligned and length checked
         Ok(unsafe { &mut *(bytes.as_mut_ptr() as *mut Self) })
+    }
+
+    #[inline(always)]
+    pub fn yes_staked(&self) -> u64 {
+        u64::from_le_bytes(self.yes_staked)
+    }
+
+    #[inline(always)]
+    pub fn no_staked(&self) -> u64 {
+        u64::from_le_bytes(self.no_staked)
     }
 
     #[inline(always)]

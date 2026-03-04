@@ -15,6 +15,7 @@ pub struct InitializeResult {
     pub wsol_account: Account,
     pub usdc_account: Account,
     pub token_program: Address,
+    pub associated_token_program: Address,
     pub system_program: Address,
     pub authority: Address,
     pub authority_account: Account,
@@ -31,6 +32,7 @@ pub fn run_initialize() -> InitializeResult {
         authority_account,
         token_program,
         token_program_account,
+        associated_token_program,
         ..
     } = base_data();
 
@@ -96,6 +98,7 @@ pub fn run_initialize() -> InitializeResult {
         wsol_account,
         usdc_account,
         token_program,
+        associated_token_program,
         system_program,
         authority,
         authority_account,

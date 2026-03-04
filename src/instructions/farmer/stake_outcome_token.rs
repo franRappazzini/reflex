@@ -99,7 +99,7 @@ impl<'a> StakeOutcomeToken<'a> {
         let market_vault = MarketVault::load_mut(&mut market_vault_data)?;
 
         if market_vault.is_settled() {
-            return Err(ReflexError::MarketWasSetted.into());
+            return Err(ReflexError::MarketWasSettled.into());
         }
 
         if &market_vault.outcome_yes_mint != self.accounts.outcome_mint.address()

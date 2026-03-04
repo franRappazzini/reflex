@@ -87,7 +87,7 @@ impl<'a> SettleMarket<'a> {
         let market = MarketVault::load_mut(&mut market_data)?;
 
         if market.is_settled() {
-            return Err(ReflexError::MarketWasSetted.into());
+            return Err(ReflexError::MarketWasSettled.into());
         }
 
         market.set_as_settled();
