@@ -18,7 +18,6 @@ pub struct CancelMarketAccounts<'a> {
     market: &'a AccountView,
     briber_ata: &'a AccountView,
     market_incentive_vault: &'a AccountView,
-    market_vault_bump: u8,
     // token_program: &'a AccountView,
     // system_program: &'a AccountView,
 }
@@ -37,7 +36,7 @@ impl<'a> TryFrom<&'a [AccountView]> for CancelMarketAccounts<'a> {
 
         Account::signer_check(briber)?;
 
-        let (market_vault_address, market_vault_bump) = Address::find_program_address(
+        let (market_vault_address, _) = Address::find_program_address(
             &[constants::TREASURY_SEED, &market.address().as_ref()],
             &crate::ID,
         );
@@ -49,7 +48,6 @@ impl<'a> TryFrom<&'a [AccountView]> for CancelMarketAccounts<'a> {
             market,
             briber_ata,
             market_incentive_vault,
-            market_vault_bump,
         })
     }
 }
@@ -84,10 +82,11 @@ impl<'a> CancelMarket<'a> {
             }
 
             // transfer incentives to briber
-            let bump_binding = self.accounts.market_vault_bump.to_le_bytes();
+            let market_id = market.id().to_le_bytes();
+            let bump_binding = [market.bump];
             let seeds = [
-                Seed::from(constants::TREASURY_SEED),
-                Seed::from(self.accounts.market.address().as_ref()),
+                Seed::from(constants::MARKET_VAULT_SEED),
+                Seed::from(&market_id),
                 Seed::from(&bump_binding),
             ];
 

@@ -58,6 +58,11 @@ impl MarketVault {
     }
 
     #[inline(always)]
+    pub fn id(&self) -> u64 {
+        u64::from_le_bytes(self.id)
+    }
+
+    #[inline(always)]
     pub fn total_yes_fees(&self) -> u64 {
         u64::from_le_bytes(self.total_yes_fees)
     }

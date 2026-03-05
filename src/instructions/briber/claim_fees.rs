@@ -1,4 +1,4 @@
-use pinocchio::{cpi::Seed, error::ProgramError, AccountView, Address, ProgramResult};
+use pinocchio::{cpi::Seed, error::ProgramError, AccountView, ProgramResult};
 
 use crate::{
     constants,
@@ -21,8 +21,6 @@ pub struct ClaimFeesAccounts<'a> {
     briber_outcome_no: &'a AccountView,
     outcome_yes_vault: &'a AccountView,
     outcome_no_vault: &'a AccountView,
-    bump_outcome_yes_vault: u8,
-    bump_outcome_no_vault: u8,
     // token_program: &'a AccountView,
     // system_program: &'a AccountView,
 }
@@ -39,23 +37,6 @@ impl<'a> TryFrom<&'a [AccountView]> for ClaimFeesAccounts<'a> {
 
         Account::signer_check(briber)?;
 
-        let (_, bump_outcome_yes_vault) = Address::find_program_address(
-            &[
-                constants::TREASURY_SEED,
-                market.address().as_ref(),
-                outcome_yes_mint.address().as_ref(),
-            ],
-            &crate::ID,
-        );
-        let (_, bump_outcome_no_vault) = Address::find_program_address(
-            &[
-                constants::TREASURY_SEED,
-                market.address().as_ref(),
-                outcome_no_mint.address().as_ref(),
-            ],
-            &crate::ID,
-        );
-
         Ok(Self {
             briber,
             market,
@@ -65,8 +46,6 @@ impl<'a> TryFrom<&'a [AccountView]> for ClaimFeesAccounts<'a> {
             briber_outcome_no,
             outcome_yes_vault,
             outcome_no_vault,
-            bump_outcome_yes_vault,
-            bump_outcome_no_vault,
         })
     }
 }
@@ -85,7 +64,14 @@ impl<'a> ClaimFees<'a> {
     pub const DISCRIMINATOR: &'a u8 = &9;
 
     pub fn process(&mut self) -> ProgramResult {
-        let (is_resolved_yes, is_resolved_no, total_yes_fees, total_no_fees) = {
+        let (
+            is_resolved_yes,
+            is_resolved_no,
+            total_yes_fees,
+            total_no_fees,
+            market_id,
+            market_bump,
+        ) = {
             let mut market_data = self.accounts.market.try_borrow_mut()?;
             let market = MarketVault::load_mut(&mut market_data)?;
 
@@ -104,18 +90,20 @@ impl<'a> ClaimFees<'a> {
                 market.is_resolved_no(),
                 market.total_yes_fees(),
                 market.total_no_fees(),
+                market.id(),
+                market.bump,
             )
         };
 
-        if is_resolved_yes && total_yes_fees > 0 {
-            let bump_binding = self.accounts.bump_outcome_yes_vault.to_le_bytes();
-            let seeds = [
-                Seed::from(constants::TREASURY_SEED),
-                Seed::from(self.accounts.market.address().as_ref()),
-                Seed::from(self.accounts.outcome_yes_mint.address().as_ref()),
-                Seed::from(&bump_binding),
-            ];
+        let market_id_binding = market_id.to_le_bytes();
+        let bump_binding = [market_bump];
+        let seeds = [
+            Seed::from(constants::MARKET_VAULT_SEED),
+            Seed::from(&market_id_binding),
+            Seed::from(&bump_binding),
+        ];
 
+        if is_resolved_yes && total_yes_fees > 0 {
             MintInterface::transfer_signed(
                 self.accounts.outcome_yes_vault,
                 self.accounts.briber_outcome_yes,
@@ -124,14 +112,6 @@ impl<'a> ClaimFees<'a> {
                 &seeds,
             )?;
         } else if is_resolved_no && total_no_fees > 0 {
-            let bump_binding = self.accounts.bump_outcome_no_vault.to_le_bytes();
-            let seeds = [
-                Seed::from(constants::TREASURY_SEED),
-                Seed::from(self.accounts.market.address().as_ref()),
-                Seed::from(self.accounts.outcome_no_mint.address().as_ref()),
-                Seed::from(&bump_binding),
-            ];
-
             MintInterface::transfer_signed(
                 self.accounts.outcome_no_vault,
                 self.accounts.briber_outcome_no,

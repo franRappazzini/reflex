@@ -20,7 +20,6 @@ pub struct UnstakeOutcomeTokenAccounts<'a> {
     outcome_mint: &'a AccountView,
     farmer_outcome_ata: &'a AccountView,
     market_outcome_vault: &'a AccountView,
-    bump_market_outcome_vault: u8,
 }
 pub struct UnstakeOutcomeTokenData {
     amount: u64,
@@ -40,15 +39,14 @@ impl<'a> TryFrom<&'a [AccountView]> for UnstakeOutcomeTokenAccounts<'a> {
         Account::program_account_check(market)?;
         // TokenAcocuntInterface::token_account_check(market_outcome_vault, market, outcome_mint)?; // CHECK: creo que esta mal
 
-        let (market_outcome_vault_address, bump_market_outcome_vault) =
-            Address::find_program_address(
-                &[
-                    constants::TREASURY_SEED,
-                    market.address().as_ref(),
-                    outcome_mint.address().as_ref(),
-                ],
-                &crate::ID,
-            );
+        let (market_outcome_vault_address, _) = Address::find_program_address(
+            &[
+                constants::TREASURY_SEED,
+                market.address().as_ref(),
+                outcome_mint.address().as_ref(),
+            ],
+            &crate::ID,
+        );
 
         require_eq_address!(
             &market_outcome_vault_address,
@@ -73,7 +71,6 @@ impl<'a> TryFrom<&'a [AccountView]> for UnstakeOutcomeTokenAccounts<'a> {
             outcome_mint,
             farmer_outcome_ata,
             market_outcome_vault,
-            bump_market_outcome_vault,
         })
     }
 }
@@ -110,7 +107,7 @@ impl<'a> UnstakeOutcomeToken<'a> {
 
     pub fn process(&mut self) -> ProgramResult {
         // update market and farmer position accounts
-        {
+        let (market_id, market_bump) = {
             let mut market_data = self.accounts.market.try_borrow_mut()?;
             let market = MarketVault::load_mut(&mut market_data)?;
 
@@ -130,14 +127,16 @@ impl<'a> UnstakeOutcomeToken<'a> {
             } else {
                 return Err(ProgramError::InvalidAccountData);
             }
-        }
+
+            (market.id(), market.bump)
+        };
 
         // transfer from market outcome vault to farmer ata
-        let bump_binding = self.accounts.bump_market_outcome_vault.to_le_bytes();
+        let market_id_binding = market_id.to_le_bytes();
+        let bump_binding = [market_bump];
         let seeds = [
-            Seed::from(constants::TREASURY_SEED),
-            Seed::from(self.accounts.market.address().as_ref()),
-            Seed::from(self.accounts.outcome_mint.address().as_ref()),
+            Seed::from(constants::MARKET_VAULT_SEED),
+            Seed::from(&market_id_binding),
             Seed::from(&bump_binding),
         ];
 

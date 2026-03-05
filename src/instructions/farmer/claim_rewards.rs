@@ -25,7 +25,6 @@ pub struct ClaimRewardsAccounts<'a> {
     market_vault: &'a AccountView,
     outcome_yes_vault: &'a AccountView,
     outcome_no_vault: &'a AccountView,
-    bump_market_vault: u8,
     // associated_token_program: &'a AccountView,
     // token_program: &'a AccountView,
     // system_program: &'a AccountView,
@@ -60,7 +59,7 @@ impl<'a> TryFrom<&'a [AccountView]> for ClaimRewardsAccounts<'a> {
             token_program,
         )?;
 
-        let (market_vault_address, bump_market_vault) = Address::find_program_address(
+        let (market_vault_address, _) = Address::find_program_address(
             &[constants::TREASURY_SEED, market.address().as_ref()],
             &crate::ID,
         );
@@ -99,7 +98,6 @@ impl<'a> TryFrom<&'a [AccountView]> for ClaimRewardsAccounts<'a> {
             market_vault,
             outcome_yes_vault,
             outcome_no_vault,
-            bump_market_vault,
             // associated_token_program,
             // token_program,
             // system_program,
@@ -129,6 +127,8 @@ impl<'a> ClaimRewards<'a> {
             total_yes_staked,
             total_no_staked,
             total_incentives,
+            market_id,
+            market_bump,
         ) = {
             let farmer_position_data = self.accounts.farmer_position.try_borrow()?;
             let farmer_position = FarmerPosition::load(&farmer_position_data)?;
@@ -159,56 +159,36 @@ impl<'a> ClaimRewards<'a> {
                 market.total_yes_staked(),
                 market.total_no_staked(),
                 market.total_incentives(),
+                market.id(),
+                market.bump,
             )
         };
 
+        let market_id_binding = market_id.to_le_bytes();
+        let market_bump_binding = [market_bump];
+        let market_seeds = [
+            Seed::from(constants::MARKET_VAULT_SEED),
+            Seed::from(&market_id_binding),
+            Seed::from(&market_bump_binding),
+        ];
+
         // and transfer back outcome tokens
         if yes_staked > 0 {
-            let (_, bump) = Address::find_program_address(
-                &[
-                    constants::TREASURY_SEED,
-                    self.accounts.market.address().as_ref(),
-                    self.accounts.outcome_yes_mint.address().as_ref(),
-                ],
-                &crate::ID,
-            );
-            let bump_binding = [bump];
-            let seeds = [
-                Seed::from(constants::TREASURY_SEED),
-                Seed::from(self.accounts.market.address().as_ref()),
-                Seed::from(self.accounts.outcome_yes_mint.address().as_ref()),
-                Seed::from(&bump_binding),
-            ];
             MintInterface::transfer_signed(
                 self.accounts.outcome_yes_vault,
                 self.accounts.farmer_outcome_yes_ata,
                 self.accounts.market,
                 yes_staked,
-                &seeds,
+                &market_seeds,
             )?;
         }
         if no_staked > 0 {
-            let (_, bump) = Address::find_program_address(
-                &[
-                    constants::TREASURY_SEED,
-                    self.accounts.market.address().as_ref(),
-                    self.accounts.outcome_no_mint.address().as_ref(),
-                ],
-                &crate::ID,
-            );
-            let bump_binding = [bump];
-            let seeds = [
-                Seed::from(constants::TREASURY_SEED),
-                Seed::from(self.accounts.market.address().as_ref()),
-                Seed::from(self.accounts.outcome_no_mint.address().as_ref()),
-                Seed::from(&bump_binding),
-            ];
             MintInterface::transfer_signed(
                 self.accounts.outcome_no_vault,
                 self.accounts.farmer_outcome_no_ata,
                 self.accounts.market,
                 no_staked,
-                &seeds,
+                &market_seeds,
             )?;
         }
 
@@ -233,18 +213,12 @@ impl<'a> ClaimRewards<'a> {
 
         // transfer incentives to farmer
         if rewards > 0 {
-            let bump_binding = [self.accounts.bump_market_vault];
-            let seeds = [
-                Seed::from(constants::TREASURY_SEED),
-                Seed::from(self.accounts.market.address().as_ref()),
-                Seed::from(&bump_binding),
-            ];
             MintInterface::transfer_signed(
                 self.accounts.market_vault,
                 self.accounts.farmer_incentive_ata,
                 self.accounts.market,
                 rewards,
-                &seeds,
+                &market_seeds,
             )?;
         }
 

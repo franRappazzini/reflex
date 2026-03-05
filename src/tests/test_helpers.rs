@@ -25,7 +25,7 @@ pub struct TestBase {
 
 /// Inicializa el entorno base de cuentas y programas para los tests
 pub fn base_data() -> TestBase {
-    let program_id = address!("7zogcJaEsucGbcnZz4o4ARRbeF8AUU1RUP7zsAJ68wK7");
+    let program_id = address!("E8ApH1v8MJMgjQ8dDFyuaS95u7iW64cWhDBa8ENZ34E7");
     let mut mollusk = Mollusk::new(&program_id, "target/deploy/reflex");
 
     // Add the SPL Token Program

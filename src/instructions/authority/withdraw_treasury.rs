@@ -16,10 +16,9 @@ pub struct WithdrawTreasury<'a> {
 pub struct WithdrawTreasuryAccounts<'a> {
     authority: &'a AccountView,
     config: &'a AccountView,
-    mint: &'a AccountView,
+    // mint: &'a AccountView,
     treasury: &'a AccountView,
     authority_ata: &'a AccountView,
-    bump_treasury: u8,
     // token_program: &'a AccountView,
 }
 
@@ -37,7 +36,7 @@ impl<'a> TryFrom<&'a [AccountView]> for WithdrawTreasuryAccounts<'a> {
             Address::find_program_address(&[constants::CONFIG_SEED], &crate::ID);
         require_eq_address!(&config_address, config.address());
 
-        let (treasury_address, bump_treasury) = Address::find_program_address(
+        let (treasury_address, _) = Address::find_program_address(
             &[constants::TREASURY_SEED, mint.address().as_ref()],
             &crate::ID,
         );
@@ -46,10 +45,9 @@ impl<'a> TryFrom<&'a [AccountView]> for WithdrawTreasuryAccounts<'a> {
         Ok(Self {
             authority,
             config,
-            mint,
+            // mint,
             treasury,
             authority_ata,
-            bump_treasury,
         })
     }
 }
@@ -84,10 +82,9 @@ impl<'a> WithdrawTreasury<'a> {
         };
 
         // transfer
-        let bump_binding = [self.accounts.bump_treasury];
+        let bump_binding = [config.bump];
         let seeds = [
-            Seed::from(constants::TREASURY_SEED),
-            Seed::from(self.accounts.mint.address().as_ref()),
+            Seed::from(constants::CONFIG_SEED),
             Seed::from(&bump_binding),
         ];
 
