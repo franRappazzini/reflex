@@ -8,3 +8,4 @@ pub mod settle_market_test;
 pub mod stake_outcome_tokens_test;
 pub mod unstake_outcome_tokens_test;
 pub mod update_config_test;
+pub mod withdraw_treasury_test;

@@ -16,7 +16,7 @@ use pinocchio::{
 
 use crate::instructions::{
     AddIncentives, CancelMarket, ClaimFees, ClaimRewards, CreateMarketVault, Initialize,
-    SettleMarket, StakeOutcomeToken, UnstakeOutcomeToken, UpdateConfig,
+    SettleMarket, StakeOutcomeToken, UnstakeOutcomeToken, UpdateConfig, WithdrawTreasury,
 };
 
 nostd_panic_handler!();
@@ -55,6 +55,9 @@ fn process_entrypoint(
         }
         Some((ClaimRewards::DISCRIMINATOR, _)) => ClaimRewards::try_from(accounts)?.process(),
         Some((ClaimFees::DISCRIMINATOR, _)) => ClaimFees::try_from(accounts)?.process(),
+        Some((WithdrawTreasury::DISCRIMINATOR, _)) => {
+            WithdrawTreasury::try_from(accounts)?.process()
+        }
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }

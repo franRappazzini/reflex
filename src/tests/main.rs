@@ -87,3 +87,10 @@ fn test_claim_fees() {
     let settle = settle_market_test::run_settle_market_with_stake(&mut init, &stake);
     claim_fees_test::run_claim_fees(&mut init, &market, &stake, &settle);
 }
+
+#[test]
+fn test_withdraw_treasury() {
+    let mut init = initialize_test::run_initialize();
+    let market = create_market_vault_test::run_create_market_vault(&mut init);
+    withdraw_treasury_test::run_withdraw_treasury(&mut init, &market);
+}
