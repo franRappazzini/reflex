@@ -2,7 +2,7 @@ use pinocchio::{AccountView, Address, ProgramResult, cpi::Seed, error::ProgramEr
 
 use crate::{
     states::Config,
-    utils::{Account, TokenAcocuntInterface, constants},
+    utils::{Account, MintInterface, TokenAccountInterface, constants},
 };
 
 pub struct Initialize<'a> {
@@ -71,9 +71,8 @@ impl<'a> TryFrom<&'a [AccountView]> for InitializeAccounts<'a> {
         };
 
         Account::signer_check(authority)?;
-        Account::not_initialized_check(config)?;
-        Account::not_initialized_check(wsol_treasury)?;
-        Account::not_initialized_check(usdc_treasury)?;
+        MintInterface::valid_mint_check(wsol_mint)?;
+        MintInterface::valid_mint_check(usdc_mint)?;
 
         let (config_address, config_bump) =
             Address::find_program_address(&[constants::CONFIG_SEED], &crate::ID);
@@ -126,7 +125,7 @@ impl<'a> TryFrom<(&'a [AccountView], &'a [u8])> for Initialize<'a> {
 impl<'a> Initialize<'a> {
     pub const DISCRIMINATOR: &'a u8 = &0;
 
-    pub fn process(&mut self) -> ProgramResult {
+    pub fn process(&self) -> ProgramResult {
         // create config account and set data
         let bump_binding = &[self.accounts.config_bump];
         let seeds = &[Seed::from(constants::CONFIG_SEED), Seed::from(bump_binding)];
@@ -142,8 +141,6 @@ impl<'a> Initialize<'a> {
             self.accounts.config_bump,
         );
 
-        drop(config_data);
-
         // initialize wsol treasury
         let bump_binding = &[self.accounts.wsol_treasury_bump];
         let seeds = &[
@@ -152,7 +149,7 @@ impl<'a> Initialize<'a> {
             Seed::from(bump_binding),
         ];
 
-        TokenAcocuntInterface::init_with_seeds(
+        TokenAccountInterface::init_with_seeds(
             self.accounts.wsol_treasury,
             self.accounts.authority,
             self.accounts.config,
@@ -169,7 +166,7 @@ impl<'a> Initialize<'a> {
             Seed::from(bump_binding),
         ];
 
-        TokenAcocuntInterface::init_with_seeds(
+        TokenAccountInterface::init_with_seeds(
             self.accounts.usdc_treasury,
             self.accounts.authority,
             self.accounts.config,

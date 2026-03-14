@@ -20,4 +20,26 @@ const getTreasuryPda = async (mint: Address) => {
   return treasury;
 };
 
-export { getConfigPda, getTreasuryPda };
+const getMarketPda = async (id: string) => {
+  const [market, _] = await getProgramDerivedAddress({
+    programAddress: constants.PROGRAM_ID,
+    seeds: [constants.MARKET_SEED, Buffer.from(id, "utf-8")],
+  });
+
+  return market;
+};
+
+const getMarketVaultPda = async (market: Address, mint: Address) => {
+  const [vault, _] = await getProgramDerivedAddress({
+    programAddress: constants.PROGRAM_ID,
+    seeds: [
+      constants.MARKET_SEED,
+      getAddressEncoder().encode(market),
+      getAddressEncoder().encode(mint),
+    ],
+  });
+
+  return vault;
+};
+
+export { getConfigPda, getTreasuryPda, getMarketPda, getMarketVaultPda };

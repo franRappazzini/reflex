@@ -6,6 +6,8 @@ use pinocchio::{
 };
 use pinocchio_system::instructions::CreateAccount;
 
+use crate::utils::constants;
+
 // TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb
 pub const TOKEN_2022_PROGRAM_ID: [u8; 32] = [
     0x06, 0xdd, 0xf6, 0xe1, 0xee, 0x75, 0x8f, 0xde, 0x18, 0x42, 0x5d, 0xbc, 0xe4, 0x6c, 0xcd, 0xda,
@@ -71,10 +73,17 @@ impl MintInterface {
         }
         .invoke_signed(&signer_seeds)
     }
+
+    pub fn valid_mint_check(mint: &AccountView) -> ProgramResult {
+        if mint.address() != constants::WSOL_ADDRESS && mint.address() != constants::USDC_ADDRESS {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        Ok(())
+    }
 }
 
-pub struct TokenAcocuntInterface;
-impl TokenAcocuntInterface {
+pub struct TokenAccountInterface;
+impl TokenAccountInterface {
     pub fn check(account: &AccountView) -> ProgramResult {
         if account.owned_by(&pinocchio_token::ID) {
             // legacy spl
@@ -154,7 +163,7 @@ impl TokenAcocuntInterface {
             from: payer,
             to: account,
             lamports,
-            space: pinocchio_token::state::TokenAccount::LEN as u64, 
+            space: pinocchio_token::state::TokenAccount::LEN as u64,
             owner: token_program.address(),
         }
         .invoke_signed(&signer_seeds)?;

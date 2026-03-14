@@ -16,8 +16,8 @@ import {
 export type Client = {
   rpc: Rpc<SolanaRpcApi>;
   rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>;
-  wallet: TransactionSigner & MessageSigner;
   sendAndConfirmTransaction: ReturnType<typeof sendAndConfirmTransactionFactory>;
+  wallet: TransactionSigner & MessageSigner;
 };
 
 let client: Client | undefined;
