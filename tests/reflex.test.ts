@@ -1,5 +1,6 @@
 import { KeyPairSigner } from "@solana/kit";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { buildAddIncentivesIx } from "./instructions/add_incentives";
 import { buildAndSendTransaction } from "./utils/tx";
 import { buildCreateMarketIxs } from "./instructions/create_market";
 import { buildInitializeIx } from "./instructions/initialize";
@@ -37,14 +38,26 @@ describe("reflex", () => {
       noMint,
     });
 
-    console.log("briber:", accounts.briber.address);
-    console.log("wallet:", client.wallet.address);
-
     const txSig = await buildAndSendTransaction(client, ixs, {
       feePayer: accounts.briber,
       additionalSigners: [client.wallet],
     });
     console.log("create_market tx:", txSig);
+    expect(true).to.be.true;
+  });
+
+  it("--- add_incentives ix ---", async () => {
+    const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
+
+    const ix = await buildAddIncentivesIx(accounts, {
+      id,
+      amount: BigInt(5 * LAMPORTS_PER_SOL),
+    });
+
+    const txSig = await buildAndSendTransaction(client, [ix], {
+      feePayer: accounts.briber,
+    });
+    console.log("add_incentives tx:", txSig);
     expect(true).to.be.true;
   });
 });

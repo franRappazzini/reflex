@@ -46,6 +46,11 @@ export async function buildAndSendTransaction(
   assertIsTransactionWithBlockhashLifetime(transaction);
 
   const txSig = getSignatureFromTransaction(transaction);
-  await client.sendAndConfirmTransaction(transaction, { commitment: "confirmed" });
+  try {
+    await client.sendAndConfirmTransaction(transaction, { commitment: "confirmed" });
+  } catch (err) {
+    console.error("Failed transaction:", err);
+    throw err;
+  }
   return txSig;
 }

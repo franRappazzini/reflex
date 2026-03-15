@@ -1,10 +1,10 @@
 import { AccountRole, Instruction } from "@solana/kit";
-import { getConfigPda, getTreasuryPda } from "../pda";
+import { getConfigPda, getTreasuryPda } from "../utils/pda";
 
-import { Client } from "../client";
+import { Client } from "../utils/client";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
-import { constants } from "../constants";
+import { constants } from "../utils/constants";
 
 /**
  * Builds the `initialize` instruction.

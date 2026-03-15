@@ -25,6 +25,7 @@ pub struct Market {
 impl Market {
     pub const LEN: usize = size_of::<Self>();
 
+    #[inline(always)]
     pub fn load(data: &[u8]) -> Result<&Self, ProgramError> {
         if data.len() != Self::LEN {
             return Err(ProgramError::InvalidAccountData);
@@ -34,6 +35,7 @@ impl Market {
         Ok(unsafe { &*(data.as_ptr() as *const Self) })
     }
 
+    #[inline(always)]
     pub fn load_mut(data: &mut [u8]) -> Result<&mut Self, ProgramError> {
         if data.len() != Self::LEN {
             return Err(ProgramError::InvalidAccountData);
@@ -43,6 +45,7 @@ impl Market {
         Ok(unsafe { &mut *(data.as_mut_ptr() as *mut Self) })
     }
 
+    #[inline(always)]
     pub fn set_inner(
         &mut self,
         briber: &Address,
@@ -68,6 +71,30 @@ impl Market {
         self.resolution = MarketResolution::None;
         self.bump = [bump];
 
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn briber(&self) -> Address {
+        Address::new_from_array(self.briber)
+    }
+
+    #[inline(always)]
+    pub fn incentive_mint(&self) -> Address {
+        Address::new_from_array(self.incentive_mint)
+    }
+
+    #[inline(always)]
+    pub fn is_open(&self) -> bool {
+        matches!(self.status, MarketStatus::Open)
+    }
+
+    #[inline(always)]
+    pub fn add_incentives(&mut self, amount: u64) -> ProgramResult {
+        let new_amount = u64::from_le_bytes(self.total_incentive_amount)
+            .checked_add(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        self.total_incentive_amount = new_amount.to_le_bytes();
         Ok(())
     }
 }

@@ -7,12 +7,12 @@ import {
 } from "@solana-program/token";
 import { AccountRole, Address, Instruction, KeyPairSigner } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS, getTransferSolInstruction } from "@solana-program/system";
-import { getConfigPda, getMarketPda, getMarketVaultPda, getTreasuryPda } from "../pda";
+import { getConfigPda, getMarketPda, getMarketVaultPda, getTreasuryPda } from "../utils/pda";
 
-import { Accounts } from "../accounts";
-import { Client } from "../client";
+import { Accounts } from "../utils/accounts";
+import { Client } from "../utils/client";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { constants } from "../constants";
+import { constants } from "../utils/constants";
 
 export type CreateMarketParams = {
   id: string;
