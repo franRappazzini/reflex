@@ -65,12 +65,6 @@ impl<'a> TryFrom<&'a [AccountView]> for AddIncentivesAccounts<'a> {
 
         Account::signer_check(briber)?;
 
-        let (config_address, _) =
-            Address::find_program_address(&[constants::CONFIG_SEED], &crate::ID);
-        if &config_address != config.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
-
         let (treasury_address, _) = Address::find_program_address(
             &[constants::TREASURY_SEED, incentive_mint.address().as_ref()],
             &crate::ID,
@@ -145,6 +139,12 @@ impl<'a> AddIncentives<'a> {
 
         let config_data = self.accounts.config.try_borrow()?;
         let config = Config::load(&config_data)?;
+
+        let config_address =
+            Address::derive_address(&[constants::CONFIG_SEED], Some(config.bump), &crate::ID);
+        if &config_address != self.accounts.config.address() {
+            return Err(ProgramError::InvalidAccountData);
+        }
 
         // transfer fees to treasury
         MintInterface::transfer(

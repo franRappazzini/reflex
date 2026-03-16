@@ -81,12 +81,6 @@ impl<'a> TryFrom<&'a [AccountView]> for CreateMarketAccounts<'a> {
         Account::signer_check(authority)?;
         Account::signer_check(briber)?;
 
-        let (config_address, _) =
-            Address::find_program_address(&[constants::CONFIG_SEED], &crate::ID);
-        if &config_address != config.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
-
         MintInterface::valid_mint_check(incentive_mint)?;
 
         let (market_incentive_vault_address, market_incentive_vault_bump) =
@@ -174,6 +168,12 @@ impl<'a> CreateMarket<'a> {
         let (fee_bps, briber_fee_bps) = {
             let config_data = self.accounts.config.try_borrow()?;
             let config = Config::load(&config_data)?;
+            
+            let config_address =
+                Address::derive_address(&[constants::CONFIG_SEED], Some(config.bump), &crate::ID);
+            if &config_address != self.accounts.config.address() {
+                return Err(ProgramError::InvalidAccountData);
+            }
             if &config.authority() != self.accounts.authority.address() {
                 return Err(ProgramError::InvalidAccountData);
             }

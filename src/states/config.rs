@@ -2,10 +2,10 @@ use pinocchio::{Address, error::ProgramError};
 
 #[repr(C)]
 pub struct Config {
-    authority: [u8; 32],
-    fee_bps: [u8; 2],
-    briber_fee_bps: [u8; 2],
-    bump: [u8; 1],
+    authority: [u8; 32],     // Address
+    fee_bps: [u8; 2],        // u16
+    briber_fee_bps: [u8; 2], // u16
+    pub bump: u8,
 }
 
 impl Config {
@@ -36,7 +36,7 @@ impl Config {
         self.authority = authority.to_bytes();
         self.fee_bps = fee_bps.to_le_bytes();
         self.briber_fee_bps = briber_fee_bps.to_le_bytes();
-        self.bump = [bump];
+        self.bump = bump;
     }
 
     #[inline(always)]

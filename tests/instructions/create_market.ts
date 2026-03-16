@@ -22,6 +22,8 @@ export type CreateMarketParams = {
   noMint: KeyPairSigner;
   /** SOL to wrap as WSOL in the briber's ATA. Defaults to 100 SOL. */
   briberWsolAmount?: bigint;
+  /** Incentive mint, defaults to WSOL. */
+  incentiveMint?: Address;
 };
 
 /**
@@ -46,12 +48,13 @@ export async function buildCreateMarketIxs(
     yesMint,
     noMint,
     briberWsolAmount = BigInt(100 * LAMPORTS_PER_SOL),
+    incentiveMint = constants.WSOL_MINT,
   }: CreateMarketParams,
 ): Promise<Instruction[]> {
   const marketPda = await getMarketPda(id);
 
   const [briberAta] = await findAssociatedTokenPda({
-    mint: constants.WSOL_MINT,
+    mint: incentiveMint,
     owner: accounts.briber.address,
     tokenProgram: TOKEN_PROGRAM_ADDRESS,
   });
@@ -59,8 +62,8 @@ export async function buildCreateMarketIxs(
   const [configPda, wsolTreasuryPda, marketIncentiveVaultPda, marketYesVaultPda, marketNoVaultPda] =
     await Promise.all([
       getConfigPda(),
-      getTreasuryPda(constants.WSOL_MINT),
-      getMarketVaultPda(marketPda, constants.WSOL_MINT),
+      getTreasuryPda(incentiveMint),
+      getMarketVaultPda(marketPda, incentiveMint),
       getMarketVaultPda(marketPda, yesMint.address),
       getMarketVaultPda(marketPda, noMint.address),
     ]);
@@ -69,7 +72,7 @@ export async function buildCreateMarketIxs(
     payer: accounts.briber,
     ata: briberAta,
     owner: accounts.briber.address,
-    mint: constants.WSOL_MINT,
+    mint: incentiveMint,
   });
 
   const transferSolToAtaIx = getTransferSolInstruction({
@@ -93,7 +96,7 @@ export async function buildCreateMarketIxs(
       { address: configPda, role: AccountRole.READONLY },
       { address: accounts.briber.address, role: AccountRole.WRITABLE_SIGNER },
       { address: marketPda, role: AccountRole.WRITABLE },
-      { address: constants.WSOL_MINT, role: AccountRole.READONLY },
+      { address: incentiveMint, role: AccountRole.READONLY },
       { address: briberAta, role: AccountRole.WRITABLE },
       { address: marketIncentiveVaultPda, role: AccountRole.WRITABLE },
       { address: wsolTreasuryPda, role: AccountRole.WRITABLE },

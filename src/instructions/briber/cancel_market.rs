@@ -1,4 +1,5 @@
 use pinocchio::{AccountView, Address, ProgramResult, cpi::Seed, error::ProgramError};
+use pinocchio_token::state::TokenAccount;
 
 use crate::{
     states::Market,
@@ -127,14 +128,31 @@ impl<'a> CancelMarket<'a> {
         )?;
 
         // close accounts
+        let (market_yes_vault_amount, market_no_vault_amount) = {
+            (
+                TokenAccount::from_account_view(self.accounts.market_yes_vault)?.amount(),
+                TokenAccount::from_account_view(self.accounts.market_no_vault)?.amount(),
+            )
+        };
+
+        if market_yes_vault_amount == 0 {
+            TokenAccountInterface::close_signed(
+                self.accounts.market_yes_vault,
+                self.accounts.market,
+                self.accounts.briber,
+                seeds,
+            )?;
+        }
+        if market_no_vault_amount == 0 {
+            TokenAccountInterface::close_signed(
+                self.accounts.market_no_vault,
+                self.accounts.market,
+                self.accounts.briber,
+                seeds,
+            )?;
+        }
         TokenAccountInterface::close_signed(
-            self.accounts.market_yes_vault,
-            self.accounts.market,
-            self.accounts.briber,
-            seeds,
-        )?;
-        TokenAccountInterface::close_signed(
-            self.accounts.market_no_vault,
+            self.accounts.market_incentive_vault,
             self.accounts.market,
             self.accounts.briber,
             seeds,
