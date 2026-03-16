@@ -119,15 +119,17 @@ impl<'a> AddIncentives<'a> {
 
     pub fn process(&self) -> ProgramResult {
         // check market, briber and incentive mint are valid
-        let (market_address, _) =
-            Address::find_program_address(&[constants::MARKET_SEED, self.data.id], &crate::ID);
-        if &market_address != self.accounts.market.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
-
         let mut market_data = self.accounts.market.try_borrow_mut()?;
         let market = Market::load_mut(&mut market_data)?;
 
+        let market_address = Address::derive_address(
+            &[constants::MARKET_SEED, self.data.id],
+            Some(market.bump),
+            &crate::ID,
+        );
+        if &market_address != self.accounts.market.address() {
+            return Err(ProgramError::InvalidAccountData);
+        }
         if !market.is_open() {
             return Err(ProgramError::InvalidAccountData);
         }

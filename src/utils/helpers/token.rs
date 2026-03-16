@@ -5,6 +5,7 @@ use pinocchio::{
     sysvars::{Sysvar, rent::Rent},
 };
 use pinocchio_system::instructions::CreateAccount;
+use pinocchio_token::instructions::CloseAccount;
 
 use crate::utils::constants;
 
@@ -174,5 +175,21 @@ impl TokenAccountInterface {
             owner: owner.address(),
         }
         .invoke()
+    }
+
+    pub fn close_signed(
+        account: &AccountView,
+        authority: &AccountView,
+        destination: &AccountView,
+        seeds: &[Seed],
+    ) -> ProgramResult {
+        let signer_seeds = [Signer::from(seeds)];
+
+        CloseAccount {
+            account,
+            authority,
+            destination,
+        }
+        .invoke_signed(&signer_seeds)
     }
 }

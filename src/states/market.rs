@@ -19,7 +19,7 @@ pub struct Market {
     fee_bps: [u8; 2],                // u16
     status: MarketStatus,
     resolution: MarketResolution,
-    bump: [u8; 1],
+    pub bump: u8,
 }
 
 impl Market {
@@ -69,7 +69,7 @@ impl Market {
         self.fee_bps = fee_bps.to_le_bytes();
         self.status = MarketStatus::Open;
         self.resolution = MarketResolution::None;
-        self.bump = [bump];
+        self.bump = bump;
 
         Ok(())
     }
@@ -82,6 +82,40 @@ impl Market {
     #[inline(always)]
     pub fn incentive_mint(&self) -> Address {
         Address::new_from_array(self.incentive_mint)
+    }
+
+    #[inline(always)]
+    pub fn outcome_yes_mint(&self) -> Address {
+        Address::new_from_array(self.outcome_yes_mint)
+    }
+
+    #[inline(always)]
+    pub fn outcome_no_mint(&self) -> Address {
+        Address::new_from_array(self.outcome_no_mint)
+    }
+
+    #[inline(always)]
+    pub fn total_incentive_amount(&self) -> u64 {
+        u64::from_le_bytes(self.total_incentive_amount)
+    }
+
+    #[inline(always)]
+    pub fn total_yes_staked(&self) -> u64 {
+        u64::from_le_bytes(self.total_yes_staked)
+    }
+
+    #[inline(always)]
+    pub fn total_no_staked(&self) -> u64 {
+        u64::from_le_bytes(self.total_no_staked)
+    }
+    #[inline(always)]
+    pub fn available_yes_fees(&self) -> u64 {
+        u64::from_le_bytes(self.available_yes_fees)
+    }
+
+    #[inline(always)]
+    pub fn available_no_fees(&self) -> u64 {
+        u64::from_le_bytes(self.available_no_fees)
     }
 
     #[inline(always)]

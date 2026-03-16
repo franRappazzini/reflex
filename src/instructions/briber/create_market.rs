@@ -207,8 +207,6 @@ impl<'a> CreateMarket<'a> {
             market_bump,
         )?;
 
-        // drop(market_data);
-
         // create atas
         // market_incentive_vault
         let bump_binding = &[self.accounts.market_incentive_vault_bump];

@@ -2,6 +2,7 @@ import { KeyPairSigner } from "@solana/kit";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { buildAddIncentivesIx } from "./instructions/add_incentives";
 import { buildAndSendTransaction } from "./utils/tx";
+import { buildCancelMarketIx } from "./instructions/cancel_market";
 import { buildCreateMarketIxs } from "./instructions/create_market";
 import { buildInitializeIx } from "./instructions/initialize";
 import { createAccounts } from "./utils/accounts";
@@ -58,6 +59,24 @@ describe("reflex", () => {
       feePayer: accounts.briber,
     });
     console.log("add_incentives tx:", txSig);
+    expect(true).to.be.true;
+  });
+
+  it("--- cancel_market ix ---", async () => {
+    const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
+
+    // cancel_market transfers all incentives back to the briber and closes
+    // market + vault accounts. It requires no pending fees on the market.
+    const ix = await buildCancelMarketIx(accounts, {
+      id,
+      yesMint: yesMint.address,
+      noMint: noMint.address,
+    });
+
+    const txSig = await buildAndSendTransaction(client, [ix], {
+      feePayer: accounts.briber,
+    });
+    console.log("cancel_market tx:", txSig);
     expect(true).to.be.true;
   });
 });

@@ -9,7 +9,7 @@ use pinocchio::{
     nostd_panic_handler, program_entrypoint,
 };
 
-use crate::instructions::{AddIncentives, CreateMarket, Initialize};
+use crate::instructions::{AddIncentives, CancelMarket, CreateMarket, Initialize};
 
 no_allocator!();
 nostd_panic_handler!();
@@ -31,6 +31,9 @@ fn process_instruction(
         }
         Some((AddIncentives::DISCRIMINATOR, data)) => {
             AddIncentives::try_from((accounts, data))?.process()
+        }
+        Some((CancelMarket::DISCRIMINATOR, data)) => {
+            CancelMarket::try_from((accounts, data))?.process()
         }
         _ => Err(ProgramError::InvalidInstructionData),
     }

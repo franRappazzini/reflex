@@ -1,3 +1,4 @@
+use pinocchio::account;
 use pinocchio::cpi::{Seed, Signer};
 use pinocchio::sysvars::Sysvar;
 use pinocchio::{AccountView, ProgramResult, error::ProgramError, sysvars::rent::Rent};
@@ -42,5 +43,18 @@ impl Account {
             owner: &crate::ID,
         }
         .invoke_signed(signer_seeds)
+    }
+
+    pub fn close(account: &AccountView, destination: &AccountView) -> ProgramResult {
+        {
+            let mut data = account.try_borrow_mut()?;
+            data[0] = 0xff;
+        }
+
+        destination.set_lamports(destination.lamports() + account.lamports());
+        account.set_lamports(0);
+
+        account.resize(1)?;
+        account.close()
     }
 }
