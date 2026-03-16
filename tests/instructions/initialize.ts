@@ -20,7 +20,7 @@ export async function buildInitializeIx(
 ): Promise<Instruction> {
   // Layout: [u8 discriminator, u16 fee_bps, u16 briber_fee_bps]
   const data = Buffer.alloc(5);
-  data.writeUInt8(0, 0);
+  data.writeUInt8(constants.INITIALIZE_DISCRIMINATOR, 0);
   data.writeUInt16LE(feeBps, 1);
   data.writeUInt16LE(briberFeeBps, 3);
 

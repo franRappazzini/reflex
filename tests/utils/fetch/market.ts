@@ -15,7 +15,7 @@ import {
 // Mirrors src/states/market.rs — MarketStatus #[repr(u8)]
 export enum MarketStatus {
   Open = 0,
-  Setted = 1,
+  Settled = 1,
 }
 
 // Mirrors src/states/market.rs — MarketResolution #[repr(u8)]

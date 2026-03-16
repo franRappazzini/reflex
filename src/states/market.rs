@@ -124,6 +124,16 @@ impl Market {
     }
 
     #[inline(always)]
+    pub fn is_resolved_yes(&self) -> bool {
+        matches!(self.resolution, MarketResolution::Yes)
+    }
+
+    #[inline(always)]
+    pub fn is_resolved_no(&self) -> bool {
+        matches!(self.resolution, MarketResolution::No)
+    }
+
+    #[inline(always)]
     pub fn add_incentives(&mut self, amount: u64) -> ProgramResult {
         let new_amount = u64::from_le_bytes(self.total_incentive_amount)
             .checked_add(amount)
@@ -131,13 +141,29 @@ impl Market {
         self.total_incentive_amount = new_amount.to_le_bytes();
         Ok(())
     }
+
+    #[inline(always)]
+    pub fn clean_available_fees(&mut self) {
+        self.available_yes_fees = 0u64.to_le_bytes();
+        self.available_no_fees = 0u64.to_le_bytes();
+    }
+
+    #[inline(always)]
+    pub fn set_resolution(&mut self, resolution: u8) {
+        self.resolution = match resolution {
+            1 => MarketResolution::Yes,
+            2 => MarketResolution::No,
+            _ => return, // invalid resolution, do nothing (validated in instruction data parsing)
+        };
+        self.status = MarketStatus::Settled;
+    }
 }
 
 #[repr(u8)]
 pub enum MarketStatus {
     // Unopen = 0,
     Open = 0,
-    Setted = 1,
+    Settled = 1,
 }
 
 #[repr(u8)]

@@ -85,7 +85,7 @@ export async function buildCreateMarketIxs(
 
   // Layout: [u8 discriminator, u64 amount, ...utf8 id]
   const firstData = Buffer.alloc(9);
-  firstData.writeUInt8(1, 0);
+  firstData.writeUInt8(constants.CREATE_MARKET_DISCRIMINATOR, 0);
   firstData.writeBigUInt64LE(amount, 1);
   const ixData = Buffer.concat([firstData, Buffer.from(id, "utf8")]);
 

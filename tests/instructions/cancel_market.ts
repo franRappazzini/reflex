@@ -45,7 +45,10 @@ export async function buildCancelMarketIx(
   ]);
 
   // Layout: [u8 discriminator=3, ...utf8 id]
-  const ixData = Buffer.concat([Buffer.from([3]), Buffer.from(id, "utf8")]);
+  const ixData = Buffer.concat([
+    Buffer.from([constants.CANCEL_MARKET_DISCRIMINATOR]),
+    Buffer.from(id, "utf8"),
+  ]);
 
   return {
     programAddress: constants.PROGRAM_ID,

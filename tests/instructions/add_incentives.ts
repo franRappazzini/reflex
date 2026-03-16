@@ -41,7 +41,7 @@ export async function buildAddIncentivesIx(
 
   // Layout: [u8 discriminator=2, u64 amount (LE), ...utf8 id]
   const header = Buffer.alloc(9);
-  header.writeUInt8(2, 0);
+  header.writeUInt8(constants.ADD_INCENTIVES_DISCRIMINATOR, 0);
   header.writeBigUInt64LE(amount, 1);
   const ixData = Buffer.concat([header, Buffer.from(id, "utf8")]);
 

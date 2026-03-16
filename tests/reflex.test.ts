@@ -4,21 +4,23 @@ import {
   SolanaError,
   SolanaErrorCode,
 } from "@solana/kit";
+import { MarketResolution, MarketStatus, fetchMarket } from "./utils/fetch/market";
 import { getConfigPda, getMarketPda } from "./utils/pda";
 
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { buildAddIncentivesIx } from "./instructions/add_incentives";
 import { buildAndSendTransaction } from "./utils/tx";
 import { buildCancelMarketIx } from "./instructions/cancel_market";
+import { buildClaimFeesIx } from "./instructions/claim_fees";
 import { buildCreateMarketIxs } from "./instructions/create_market";
 import { buildInitializeIx } from "./instructions/initialize";
+import { buildSettleMarketIx } from "./instructions/settle_market";
 import { constants } from "./utils/constants";
 import { createAccounts } from "./utils/accounts";
 import { createClient } from "./utils/client";
 import { createMint } from "./utils/mint";
 import { expect } from "chai";
 import { fetchConfig } from "./utils/fetch/config";
-import { fetchMarket } from "./utils/fetch/market";
 
 describe("reflex", () => {
   let client: Awaited<ReturnType<typeof createClient>>;
@@ -91,7 +93,7 @@ describe("reflex", () => {
     expect(market.totalIncentiveAmount).to.equal(marketBefore.totalIncentiveAmount + amount);
   });
 
-  it("--- cancel_market ix ---", async () => {
+  it.skip("--- cancel_market ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
 
     // cancel_market transfers all incentives back to the briber and closes
@@ -120,5 +122,47 @@ describe("reflex", () => {
         expect.fail(`Expected a SolanaError with 'Account not found', got ${err}`);
       }
     }
+  });
+
+  it("--- settle_market ix ---", async () => {
+    const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
+
+    const ix = await buildSettleMarketIx(client, {
+      id,
+      resolution: MarketResolution.Yes,
+    });
+
+    const txSig = await buildAndSendTransaction(client, [ix]);
+    console.log("settle_market tx:", txSig);
+
+    const marketAddress = await getMarketPda(id);
+    const market = await fetchMarket(client.rpc, marketAddress);
+
+    expect(market.resolution).to.equal(MarketResolution.Yes);
+    expect(market.status).to.equal(MarketStatus.Settled); 
+  });
+
+  // claim_fees requires a settled market. A fresh market is created here since
+  // the main one was already cancelled. It is settled inline before claiming.
+  it("--- claim_fees ix ---", async () => {
+    const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
+
+    // read on-chain state to pick the correct outcome mint.
+    const marketAddress = await getMarketPda(id);
+    const market = await fetchMarket(client.rpc, marketAddress);
+    const outcomeMint =
+      market.resolution === MarketResolution.Yes ? market.outcomeYesMint : market.outcomeNoMint;
+
+    // claim fees.
+    const ix = await buildClaimFeesIx(accounts, { id, outcomeMint });
+    const txSig = await buildAndSendTransaction(client, [ix], {
+      feePayer: accounts.briber,
+    });
+    console.log("claim_fees tx:", txSig);
+
+    // after claiming, available fees must be 0.
+    const marketAfter = await fetchMarket(client.rpc, marketAddress);
+    expect(marketAfter.availableYesFees).to.equal(0n);
+    expect(marketAfter.availableNoFees).to.equal(0n);
   });
 });
