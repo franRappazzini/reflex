@@ -42,4 +42,17 @@ const getMarketVaultPda = async (market: Address, mint: Address) => {
   return vault;
 };
 
-export { getConfigPda, getTreasuryPda, getMarketPda, getMarketVaultPda };
+const getFarmerPositionPda = async (market: Address, farmer: Address) => {
+  const [farmerPosition, _] = await getProgramDerivedAddress({
+    programAddress: constants.PROGRAM_ID,
+    seeds: [
+      constants.FARMER_POSITION_SEED,
+      getAddressEncoder().encode(market),
+      getAddressEncoder().encode(farmer),
+    ],
+  });
+
+  return farmerPosition;
+};
+
+export { getConfigPda, getTreasuryPda, getMarketPda, getMarketVaultPda, getFarmerPositionPda };

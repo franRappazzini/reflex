@@ -40,8 +40,8 @@ impl<'a> TryFrom<&'a [AccountView]> for ClaimFeesAccounts<'a> {
     fn try_from(accounts: &'a [AccountView]) -> Result<Self, Self::Error> {
         let [
             briber,
-            market,       // TODO
-            outcome_mint, // TODO
+            market,
+            outcome_mint,
             briber_ata,
             market_outcome_vault,
             _token_program,
@@ -112,13 +112,15 @@ impl<'a> ClaimFees<'a> {
         // set available fees to 0
         market.clean_available_fees();
 
-        // transfer amount if > 0
+        // transfer
         let bump_binding = &[market.bump];
         let seeds = &[
             Seed::from(constants::MARKET_SEED),
-            Seed::from(self.accounts.market.address().as_ref()),
+            Seed::from(self.data.id),
             Seed::from(bump_binding),
         ];
+
+        drop(market_data);
 
         MintInterface::transfer_signed(
             self.accounts.market_outcome_vault,

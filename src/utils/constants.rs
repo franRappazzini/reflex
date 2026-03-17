@@ -10,3 +10,4 @@ pub const USDC_ADDRESS: &Address =
 pub const CONFIG_SEED: &[u8] = b"config";
 pub const TREASURY_SEED: &[u8] = b"treasury";
 pub const MARKET_SEED: &[u8] = b"market";
+pub const FARMER_POSITION_SEED: &[u8] = b"farmer_position";

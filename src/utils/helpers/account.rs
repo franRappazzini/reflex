@@ -1,4 +1,3 @@
-use pinocchio::account;
 use pinocchio::cpi::{Seed, Signer};
 use pinocchio::sysvars::Sysvar;
 use pinocchio::{AccountView, ProgramResult, error::ProgramError, sysvars::rent::Rent};
@@ -9,6 +8,14 @@ impl Account {
     pub fn signer_check(account: &AccountView) -> ProgramResult {
         if !account.is_signer() {
             return Err(ProgramError::MissingRequiredSignature);
+        }
+
+        Ok(())
+    }
+
+    pub fn program_account_check(account: &AccountView) -> ProgramResult {
+        if !account.owned_by(&crate::ID) {
+            return Err(ProgramError::InvalidAccountData);
         }
 
         Ok(())
@@ -43,6 +50,17 @@ impl Account {
             owner: &crate::ID,
         }
         .invoke_signed(signer_seeds)
+    }
+
+    pub fn init_if_needed<T>(
+        account: &AccountView,
+        payer: &AccountView,
+        seeds: &[Seed],
+    ) -> ProgramResult {
+        match Self::program_account_check(account) {
+            Ok(_) => Ok(()),
+            Err(_) => Self::init_pda::<T>(account, payer, seeds),
+        }
     }
 
     pub fn close(account: &AccountView, destination: &AccountView) -> ProgramResult {

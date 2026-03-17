@@ -1,5 +1,9 @@
 import { AccountRole, Address, Instruction } from "@solana/kit";
-import { TOKEN_PROGRAM_ADDRESS, findAssociatedTokenPda } from "@solana-program/token";
+import {
+  TOKEN_PROGRAM_ADDRESS,
+  findAssociatedTokenPda,
+  getCreateAssociatedTokenInstructionAsync,
+} from "@solana-program/token";
 import { getMarketPda, getMarketVaultPda } from "../utils/pda";
 
 import { Accounts } from "../utils/accounts";
@@ -27,21 +31,28 @@ export type ClaimFeesParams = {
  * Pre-conditions:
  *   - Market must be resolved (yes or no).
  *   - Market must have available fees > 0 on the resolved side.
- *   - The briber's ATA for `outcomeMint` must already exist.
  */
-export async function buildClaimFeesIx(
+export async function buildClaimFeesIxs(
   accounts: Accounts,
   { id, outcomeMint }: ClaimFeesParams,
-): Promise<Instruction> {
+): Promise<Instruction[]> {
   const marketPda = await getMarketPda(id);
 
-  const [briberAta] = await findAssociatedTokenPda({
-    mint: outcomeMint,
-    owner: accounts.briber.address,
-    tokenProgram: TOKEN_PROGRAM_ADDRESS,
-  });
+  const [[briberAta], marketOutcomeVaultPda] = await Promise.all([
+    findAssociatedTokenPda({
+      mint: outcomeMint,
+      owner: accounts.briber.address,
+      tokenProgram: TOKEN_PROGRAM_ADDRESS,
+    }),
+    getMarketVaultPda(marketPda, outcomeMint),
+  ]);
 
-  const marketOutcomeVaultPda = await getMarketVaultPda(marketPda, outcomeMint);
+  const createBriberAtaIx = await getCreateAssociatedTokenInstructionAsync({
+    payer: accounts.briber,
+    ata: briberAta,
+    owner: accounts.briber.address,
+    mint: outcomeMint,
+  });
 
   // Layout: [u8 discriminator=4, ...utf8 id]
   const ixData = Buffer.concat([
@@ -49,7 +60,7 @@ export async function buildClaimFeesIx(
     Buffer.from(id, "utf8"),
   ]);
 
-  return {
+  const claimIx: Instruction = {
     programAddress: constants.PROGRAM_ID,
     accounts: [
       { address: accounts.briber.address, role: AccountRole.WRITABLE_SIGNER },
@@ -61,4 +72,6 @@ export async function buildClaimFeesIx(
     ],
     data: ixData,
   };
+
+  return [createBriberAtaIx, claimIx];
 }

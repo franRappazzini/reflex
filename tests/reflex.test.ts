@@ -5,16 +5,24 @@ import {
   SolanaErrorCode,
 } from "@solana/kit";
 import { MarketResolution, MarketStatus, fetchMarket } from "./utils/fetch/market";
+import {
+  TOKEN_PROGRAM_ADDRESS,
+  findAssociatedTokenPda,
+  getCreateAssociatedTokenInstructionAsync,
+  getMintToInstruction,
+} from "@solana-program/token";
 import { getConfigPda, getMarketPda } from "./utils/pda";
 
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { buildAddIncentivesIx } from "./instructions/add_incentives";
 import { buildAndSendTransaction } from "./utils/tx";
 import { buildCancelMarketIx } from "./instructions/cancel_market";
-import { buildClaimFeesIx } from "./instructions/claim_fees";
+import { buildClaimFeesIxs } from "./instructions/claim_fees";
 import { buildCreateMarketIxs } from "./instructions/create_market";
 import { buildInitializeIx } from "./instructions/initialize";
 import { buildSettleMarketIx } from "./instructions/settle_market";
+import { buildStakeOutcomeTokenIx } from "./instructions/stake_outcome_token";
+import { buildWithdrawTreasuryIxs } from "./instructions/withdraw_treasury";
 import { constants } from "./utils/constants";
 import { createAccounts } from "./utils/accounts";
 import { createClient } from "./utils/client";
@@ -124,6 +132,60 @@ describe("reflex", () => {
     }
   });
 
+  it("--- stake_outcome_token ix ---", async () => {
+    const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
+    const stakeAmount = BigInt(100_000_000); // 100 token (6 decimals)
+
+    // fetch market to get the yes mint
+    const marketAddress = await getMarketPda(id);
+    const market = await fetchMarket(client.rpc, marketAddress);
+    const outcomeMint = market.outcomeYesMint;
+
+    // create farmer ATA for yes mint and mint tokens into it
+    const [[farmerAta]] = await Promise.all([
+      findAssociatedTokenPda({
+        mint: outcomeMint,
+        owner: accounts.farmer.address,
+        tokenProgram: TOKEN_PROGRAM_ADDRESS,
+      }),
+    ]);
+
+    const createFarmerAtaIx = await getCreateAssociatedTokenInstructionAsync({
+      payer: client.wallet,
+      ata: farmerAta,
+      owner: accounts.farmer.address,
+      mint: outcomeMint,
+    });
+
+    const mintToIx = getMintToInstruction({
+      mint: outcomeMint,
+      token: farmerAta,
+      mintAuthority: client.wallet,
+      amount: stakeAmount,
+    });
+
+    await buildAndSendTransaction(client, [createFarmerAtaIx, mintToIx]);
+
+    // stake
+    const ix = await buildStakeOutcomeTokenIx({
+      id,
+      amount: stakeAmount,
+      outcomeMint,
+      farmer: accounts.farmer,
+    });
+
+    const txSig = await buildAndSendTransaction(client, [ix], {
+      additionalSigners: [accounts.farmer],
+    });
+    console.log("stake_outcome_token tx:", txSig);
+
+    const marketAfter = await fetchMarket(client.rpc, marketAddress);
+    expect(marketAfter.totalYesStaked > 0n).to.be.true;
+    expect(marketAfter.availableYesFees > 0n).to.be.true;
+    expect(marketAfter.totalNoStaked).to.equal(0n);
+    expect(marketAfter.availableNoFees).to.equal(0n);
+  });
+
   it("--- settle_market ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
 
@@ -139,7 +201,7 @@ describe("reflex", () => {
     const market = await fetchMarket(client.rpc, marketAddress);
 
     expect(market.resolution).to.equal(MarketResolution.Yes);
-    expect(market.status).to.equal(MarketStatus.Settled); 
+    expect(market.status).to.equal(MarketStatus.Settled);
   });
 
   // claim_fees requires a settled market. A fresh market is created here since
@@ -154,8 +216,8 @@ describe("reflex", () => {
       market.resolution === MarketResolution.Yes ? market.outcomeYesMint : market.outcomeNoMint;
 
     // claim fees.
-    const ix = await buildClaimFeesIx(accounts, { id, outcomeMint });
-    const txSig = await buildAndSendTransaction(client, [ix], {
+    const ixs = await buildClaimFeesIxs(accounts, { id, outcomeMint });
+    const txSig = await buildAndSendTransaction(client, ixs, {
       feePayer: accounts.briber,
     });
     console.log("claim_fees tx:", txSig);
@@ -164,5 +226,13 @@ describe("reflex", () => {
     const marketAfter = await fetchMarket(client.rpc, marketAddress);
     expect(marketAfter.availableYesFees).to.equal(0n);
     expect(marketAfter.availableNoFees).to.equal(0n);
+  });
+
+  it("--- withdraw_treasury ix ---", async () => {
+    // Creates authority ATAs for WSOL and USDC (if needed) then drains both
+    // treasury PDAs into them.
+    const ixs = await buildWithdrawTreasuryIxs(client);
+    const txSig = await buildAndSendTransaction(client, ixs);
+    console.log("withdraw_treasury tx:", txSig);
   });
 });
