@@ -1,16 +1,9 @@
 import {
   MessageSigner,
-  Rpc,
-  RpcSubscriptions,
-  SolanaRpcApi,
-  SolanaRpcSubscriptionsApi,
   TransactionSigner,
   airdropFactory,
-  createSolanaRpc,
-  createSolanaRpcSubscriptions,
   generateKeyPairSigner,
   lamports,
-  sendAndConfirmTransactionFactory,
 } from "@solana/kit";
 
 import { Client } from "./client";

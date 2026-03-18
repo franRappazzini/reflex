@@ -131,7 +131,6 @@ impl<'a> StakeOutcomeToken<'a> {
             return Err(ProgramError::InvalidAccountData);
         }
 
-        // checkear manualmente si existe, sino crear. no usando init_if_needed, para ahorrar el find_program_address y pasarle bump si puede a derive_address
         let bump_binding = &[self.accounts.farmer_position_bump];
         let seeds = &[
             Seed::from(constants::FARMER_POSITION_SEED),

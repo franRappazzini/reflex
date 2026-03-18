@@ -2,7 +2,6 @@ import {
   Address,
   Rpc,
   SolanaRpcApi,
-  assertAccountExists,
   fetchEncodedAccount,
   getAddressCodec,
   getI64Codec,
@@ -75,16 +74,30 @@ export type MarketAccount = {
   bump: number;
 };
 
-export async function fetchMarket(
+/**
+ * Returns the decoded Market account, or `null` if the account does not exist.
+ * Use this when validating that an account was closed.
+ */
+export async function fetchMaybeMarket(
   rpc: Rpc<SolanaRpcApi>,
   address: Address,
-): Promise<MarketAccount> {
+): Promise<MarketAccount | null> {
   const account = await fetchEncodedAccount(rpc, address);
-  assertAccountExists(account);
+  if (!account.exists) return null;
   const decoded = marketCodec.decode(account.data);
   return {
     ...decoded,
     status: decoded.status as MarketStatus,
     resolution: decoded.resolution as MarketResolution,
   };
+}
+
+/** Returns the decoded Market account. Throws if the account does not exist. */
+export async function fetchMarket(
+  rpc: Rpc<SolanaRpcApi>,
+  address: Address,
+): Promise<MarketAccount> {
+  const market = await fetchMaybeMarket(rpc, address);
+  if (!market) throw new Error(`Market account not found: ${address}`);
+  return market;
 }

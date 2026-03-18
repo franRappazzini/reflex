@@ -1,18 +1,19 @@
 import {
-  KeyPairSigner,
-  SOLANA_ERROR__ACCOUNTS__ACCOUNT_NOT_FOUND,
-  SolanaError,
-  SolanaErrorCode,
-} from "@solana/kit";
-import { MarketResolution, MarketStatus, fetchMarket } from "./utils/fetch/market";
+  MarketResolution,
+  MarketStatus,
+  fetchMarket,
+  fetchMaybeMarket,
+} from "./utils/fetch/market";
 import {
   TOKEN_PROGRAM_ADDRESS,
   findAssociatedTokenPda,
   getCreateAssociatedTokenInstructionAsync,
   getMintToInstruction,
 } from "@solana-program/token";
-import { getConfigPda, getMarketPda } from "./utils/pda";
+import { fetchFarmerPosition, fetchMaybeFarmerPosition } from "./utils/fetch/farmer_position";
+import { getConfigPda, getFarmerPositionPda, getMarketPda } from "./utils/pda";
 
+import { KeyPairSigner } from "@solana/kit";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { buildAddIncentivesIx } from "./instructions/add_incentives";
 import { buildAndSendTransaction } from "./utils/tx";
@@ -22,6 +23,7 @@ import { buildCreateMarketIxs } from "./instructions/create_market";
 import { buildInitializeIx } from "./instructions/initialize";
 import { buildSettleMarketIx } from "./instructions/settle_market";
 import { buildStakeOutcomeTokenIx } from "./instructions/stake_outcome_token";
+import { buildUnstakeOutcomeTokenIx } from "./instructions/unstake_outcome_token";
 import { buildWithdrawTreasuryIxs } from "./instructions/withdraw_treasury";
 import { constants } from "./utils/constants";
 import { createAccounts } from "./utils/accounts";
@@ -118,18 +120,8 @@ describe("reflex", () => {
     console.log("cancel_market tx:", txSig);
 
     const marketAddress = await getMarketPda(id);
-    try {
-      await fetchMarket(client.rpc, marketAddress);
-      expect.fail(
-        "Expected fetchMarket to throw an error since the market should have been cancelled and closed.",
-      );
-    } catch (err) {
-      if (err instanceof SolanaError) {
-        expect(err.message).to.include("Account not found");
-      } else {
-        expect.fail(`Expected a SolanaError with 'Account not found', got ${err}`);
-      }
-    }
+    const market = await fetchMaybeMarket(client.rpc, marketAddress);
+    expect(market).to.be.null;
   });
 
   it("--- stake_outcome_token ix ---", async () => {
@@ -184,6 +176,48 @@ describe("reflex", () => {
     expect(marketAfter.availableYesFees > 0n).to.be.true;
     expect(marketAfter.totalNoStaked).to.equal(0n);
     expect(marketAfter.availableNoFees).to.equal(0n);
+  });
+
+  it("--- unstake_outcome_token ix ---", async () => {
+    const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
+
+    const marketAddress = await getMarketPda(id);
+    const market = await fetchMarket(client.rpc, marketAddress);
+    const outcomeMint = market.outcomeYesMint;
+
+    const farmerPositionAddress = await getFarmerPositionPda(
+      marketAddress,
+      accounts.farmer.address,
+    );
+    const positionBefore = await fetchFarmerPosition(client.rpc, farmerPositionAddress);
+
+    // unstake half of what this farmer has staked
+    const unstakeAmount = positionBefore.yesStaked / 2n;
+
+    const ix = await buildUnstakeOutcomeTokenIx({
+      id,
+      amount: unstakeAmount,
+      outcomeMint,
+      farmer: accounts.farmer,
+    });
+
+    const txSig = await buildAndSendTransaction(client, [ix], {
+      additionalSigners: [accounts.farmer],
+    });
+    console.log("unstake_outcome_token tx:", txSig);
+
+    const [marketAfter, positionAfter] = await Promise.all([
+      fetchMarket(client.rpc, marketAddress),
+      fetchFarmerPosition(client.rpc, farmerPositionAddress),
+    ]);
+
+    // market totals decreased by the unstaked amount
+    expect(marketAfter.totalYesStaked).to.equal(market.totalYesStaked - unstakeAmount);
+    // fees are unaffected by unstaking
+    expect(marketAfter.availableYesFees).to.equal(market.availableYesFees);
+    // farmer position reflects the change
+    expect(positionAfter.yesStaked).to.equal(positionBefore.yesStaked - unstakeAmount);
+    expect(positionAfter.noStaked).to.equal(0n);
   });
 
   it("--- settle_market ix ---", async () => {

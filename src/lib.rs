@@ -11,7 +11,7 @@ use pinocchio::{
 
 use crate::instructions::{
     AddIncentives, CancelMarket, ClaimFees, CreateMarket, Initialize, SettleMarket,
-    StakeOutcomeToken, WithdrawTreasury,
+    StakeOutcomeToken, UnstakeOutcomeToken, WithdrawTreasury,
 };
 
 no_allocator!();
@@ -47,6 +47,9 @@ fn process_instruction(
         }
         Some((StakeOutcomeToken::DISCRIMINATOR, data)) => {
             StakeOutcomeToken::try_from((accounts, data))?.process()
+        }
+        Some((UnstakeOutcomeToken::DISCRIMINATOR, data)) => {
+            UnstakeOutcomeToken::try_from((accounts, data))?.process()
         }
         _ => Err(ProgramError::InvalidInstructionData),
     }

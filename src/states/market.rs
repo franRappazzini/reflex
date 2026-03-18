@@ -182,6 +182,24 @@ impl Market {
     }
 
     #[inline(always)]
+    pub fn sub_yes_staked(&mut self, amount: u64) -> ProgramResult {
+        let new_amount = u64::from_le_bytes(self.total_yes_staked)
+            .checked_sub(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        self.total_yes_staked = new_amount.to_le_bytes();
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn sub_no_staked(&mut self, amount: u64) -> ProgramResult {
+        let new_amount = u64::from_le_bytes(self.total_no_staked)
+            .checked_sub(amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        self.total_no_staked = new_amount.to_le_bytes();
+        Ok(())
+    }
+
+    #[inline(always)]
     pub fn add_yes_fees(&mut self, amount: u64) -> ProgramResult {
         let new_amount = u64::from_le_bytes(self.available_yes_fees)
             .checked_add(amount)
