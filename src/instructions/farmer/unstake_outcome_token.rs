@@ -79,8 +79,8 @@ impl<'a> TryFrom<(&'a [AccountView], &'a [u8])> for UnstakeOutcomeToken<'a> {
 
     fn try_from((accounts, data): (&'a [AccountView], &'a [u8])) -> Result<Self, Self::Error> {
         Ok(Self {
-            accounts: accounts.try_into()?,
-            data: data.try_into()?,
+            accounts: UnstakeOutcomeTokenAccounts::try_from(accounts)?,
+            data: UnstakeOutcomeTokenData::try_from(data)?,
         })
     }
 }

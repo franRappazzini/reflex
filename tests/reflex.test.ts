@@ -19,6 +19,7 @@ import { buildAddIncentivesIx } from "./instructions/add_incentives";
 import { buildAndSendTransaction } from "./utils/tx";
 import { buildCancelMarketIx } from "./instructions/cancel_market";
 import { buildClaimFeesIxs } from "./instructions/claim_fees";
+import { buildClaimRewardsIxs } from "./instructions/claim_rewards";
 import { buildCreateMarketIxs } from "./instructions/create_market";
 import { buildInitializeIx } from "./instructions/initialize";
 import { buildSettleMarketIx } from "./instructions/settle_market";
@@ -262,8 +263,43 @@ describe("reflex", () => {
     expect(marketAfter.availableNoFees).to.equal(0n);
   });
 
+  it("--- claim_rewards ix ---", async () => {
+    const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
+
+    const marketAddress = await getMarketPda(id);
+    const market = await fetchMarket(client.rpc, marketAddress);
+    // market is resolved Yes — reward_mint is the incentive mint (WSOL),
+    // outcome_mint is the winning side.
+    const outcomeMint = market.outcomeYesMint;
+    const rewardMint = market.incentiveMint;
+
+    const farmerPositionAddress = await getFarmerPositionPda(
+      marketAddress,
+      accounts.farmer.address,
+    );
+    const positionBefore = await fetchFarmerPosition(client.rpc, farmerPositionAddress);
+
+    const ixs = await buildClaimRewardsIxs({
+      id,
+      rewardMint,
+      outcomeMint,
+      farmer: accounts.farmer,
+    });
+
+    const txSig = await buildAndSendTransaction(client, ixs, {
+      additionalSigners: [accounts.farmer],
+    });
+    console.log("claim_rewards tx:", txSig);
+
+    // farmer_position must be closed after claiming
+    const positionAfter = await fetchMaybeFarmerPosition(client.rpc, farmerPositionAddress);
+    expect(positionAfter).to.be.null;
+
+    // the staked amount was non-zero before claiming
+    expect(positionBefore.yesStaked > 0n).to.be.true;
+  });
+
   it("--- withdraw_treasury ix ---", async () => {
-    // Creates authority ATAs for WSOL and USDC (if needed) then drains both
     // treasury PDAs into them.
     const ixs = await buildWithdrawTreasuryIxs(client);
     const txSig = await buildAndSendTransaction(client, ixs);

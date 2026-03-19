@@ -64,8 +64,8 @@ impl<'a> TryFrom<(&'a [AccountView], &'a [u8])> for SettleMarket<'a> {
 
     fn try_from((accounts, data): (&'a [AccountView], &'a [u8])) -> Result<Self, Self::Error> {
         Ok(Self {
-            accounts: accounts.try_into()?,
-            data: data.try_into()?,
+            accounts: SettleMarketAccounts::try_from(accounts)?,
+            data: SettleMarketData::try_from(data)?,
         })
     }
 }

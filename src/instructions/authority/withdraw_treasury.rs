@@ -88,7 +88,7 @@ impl<'a> TryFrom<&'a [AccountView]> for WithdrawTreasury<'a> {
 
     fn try_from(accounts: &'a [AccountView]) -> Result<Self, Self::Error> {
         Ok(Self {
-            accounts: accounts.try_into()?,
+            accounts: WithdrawTreasuryAccounts::try_from(accounts)?,
         })
     }
 }

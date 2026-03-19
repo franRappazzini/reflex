@@ -102,8 +102,8 @@ impl<'a> TryFrom<(&'a [AccountView], &'a [u8])> for AddIncentives<'a> {
 
     fn try_from((accounts, data): (&'a [AccountView], &'a [u8])) -> Result<Self, Self::Error> {
         Ok(Self {
-            accounts: accounts.try_into()?,
-            data: data.try_into()?,
+            accounts: AddIncentivesAccounts::try_from(accounts)?,
+            data: AddIncentivesData::try_from(data)?,
         })
     }
 }

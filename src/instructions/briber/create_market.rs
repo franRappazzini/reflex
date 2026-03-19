@@ -154,8 +154,8 @@ impl<'a> TryFrom<(&'a [AccountView], &'a [u8])> for CreateMarket<'a> {
 
     fn try_from((accounts, data): (&'a [AccountView], &'a [u8])) -> Result<Self, Self::Error> {
         Ok(Self {
-            accounts: accounts.try_into()?,
-            data: data.try_into()?,
+            accounts: CreateMarketAccounts::try_from(accounts)?,
+            data: CreateMarketData::try_from(data)?,
         })
     }
 }
@@ -168,7 +168,7 @@ impl<'a> CreateMarket<'a> {
         let (fee_bps, briber_fee_bps) = {
             let config_data = self.accounts.config.try_borrow()?;
             let config = Config::load(&config_data)?;
-            
+
             let config_address =
                 Address::derive_address(&[constants::CONFIG_SEED], Some(config.bump), &crate::ID);
             if &config_address != self.accounts.config.address() {

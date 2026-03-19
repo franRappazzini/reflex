@@ -124,6 +124,11 @@ impl Market {
     }
 
     #[inline(always)]
+    pub fn is_settled(&self) -> bool {
+        matches!(self.status, MarketStatus::Settled)
+    }
+
+    #[inline(always)]
     pub fn is_resolved_yes(&self) -> bool {
         matches!(self.resolution, MarketResolution::Yes)
     }
@@ -136,6 +141,22 @@ impl Market {
     #[inline(always)]
     pub fn fee_bps(&self) -> u16 {
         u16::from_le_bytes(self.fee_bps)
+    }
+
+    #[inline(always)]
+    pub fn calculate_reward(
+        &self,
+        total_staked: u64,
+        staked_amount: u64,
+    ) -> Result<u64, ProgramError> {
+        if total_staked == 0 || staked_amount == 0 {
+            return Ok(0);
+        }
+        Ok((staked_amount as u128)
+            .checked_mul(self.total_incentive_amount() as u128)
+            .and_then(|v| v.checked_div(total_staked as u128))
+            .and_then(|v| v.try_into().ok())
+            .ok_or(ProgramError::ArithmeticOverflow)?)
     }
 
     #[inline(always)]
