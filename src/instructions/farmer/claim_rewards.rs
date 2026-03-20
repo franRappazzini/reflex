@@ -113,76 +113,79 @@ impl<'a> ClaimRewards<'a> {
     pub const DISCRIMINATOR: &'a u8 = &9;
 
     pub fn process(&self) -> ProgramResult {
-        // check market and its data
-        let mut market_data = self.accounts.market.try_borrow_mut()?;
-        let market = Market::load_mut(&mut market_data)?;
+        let (staked_amount, reward_amount, market_bump) = {
+            // check market and its data
+            let mut market_data = self.accounts.market.try_borrow_mut()?;
+            let market = Market::load_mut(&mut market_data)?;
 
-        let market_address = Address::derive_address(
-            &[constants::MARKET_SEED, self.data.market_id],
-            Some(market.bump),
-            &crate::ID,
-        );
-        if &market_address != self.accounts.market.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if !market.is_settled() {
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if &market.incentive_mint() != self.accounts.reward_mint.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
+            let market_address = Address::derive_address(
+                &[constants::MARKET_SEED, self.data.market_id],
+                Some(market.bump),
+                &crate::ID,
+            );
+            if &market_address != self.accounts.market.address() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+            if !market.is_settled() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+            if &market.incentive_mint() != self.accounts.reward_mint.address() {
+                return Err(ProgramError::InvalidAccountData);
+            }
 
-        // check farmer position and its data (mint, amount)
-        let mut farmer_position_data = self.accounts.farmer_position.try_borrow_mut()?;
-        let farmer_position = FarmerPosition::load_mut(&mut farmer_position_data)?;
+            // check farmer position and its data (mint, amount)
+            let mut farmer_position_data = self.accounts.farmer_position.try_borrow_mut()?;
+            let farmer_position = FarmerPosition::load_mut(&mut farmer_position_data)?;
 
-        let farmer_position_address = Address::derive_address(
-            &[
-                constants::FARMER_POSITION_SEED,
-                self.accounts.market.address().as_ref(),
-                self.accounts.farmer.address().as_ref(),
-            ],
-            Some(farmer_position.bump),
-            &crate::ID,
-        );
-        if &farmer_position_address != self.accounts.farmer_position.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if !farmer_position.is_initialized {
-            return Err(ProgramError::UninitializedAccount);
-        }
+            let farmer_position_address = Address::derive_address(
+                &[
+                    constants::FARMER_POSITION_SEED,
+                    self.accounts.market.address().as_ref(),
+                    self.accounts.farmer.address().as_ref(),
+                ],
+                Some(farmer_position.bump),
+                &crate::ID,
+            );
+            if &farmer_position_address != self.accounts.farmer_position.address() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+            if !farmer_position.is_initialized {
+                return Err(ProgramError::UninitializedAccount);
+            }
 
-        // check mint, mint winner, staked amount
-        let (staked_amount, reward_amount) = if market.is_resolved_yes()
-            && &market.outcome_yes_mint() == self.accounts.outcome_mint.address()
-        {
-            (
-                farmer_position.yes_staked(),
-                market.calculate_reward(market.total_yes_staked(), farmer_position.yes_staked())?,
-            )
-        } else if market.is_resolved_no()
-            && &market.outcome_no_mint() == self.accounts.outcome_mint.address()
-        {
-            (
-                farmer_position.no_staked(),
-                market.calculate_reward(market.total_no_staked(), farmer_position.no_staked())?,
-            )
-        } else {
-            return Err(ProgramError::InvalidAccountData);
+            // check mint, mint winner, staked amount
+            let (staked_amount, reward_amount) = if market.is_resolved_yes()
+                && &market.outcome_yes_mint() == self.accounts.outcome_mint.address()
+            {
+                (
+                    farmer_position.yes_staked(),
+                    market.calculate_reward(
+                        market.total_yes_staked(),
+                        farmer_position.yes_staked(),
+                    )?,
+                )
+            } else if market.is_resolved_no()
+                && &market.outcome_no_mint() == self.accounts.outcome_mint.address()
+            {
+                (
+                    farmer_position.no_staked(),
+                    market
+                        .calculate_reward(market.total_no_staked(), farmer_position.no_staked())?,
+                )
+            } else {
+                return Err(ProgramError::InvalidAccountData);
+            };
+
+            (staked_amount, reward_amount, market.bump)
         };
 
         // transfer rewards
-        let bump_binding = &[market.bump];
+        let bump_binding = &[market_bump];
         let seeds = &[
             Seed::from(constants::MARKET_SEED),
             Seed::from(self.data.market_id),
             Seed::from(bump_binding),
         ];
-
-        pinocchio_log::log!("reward_amount: {}", reward_amount);
-        pinocchio_log::log!("staked_amount: {}", staked_amount);
-
-        drop(market_data);
 
         if reward_amount > 0 {
             MintInterface::transfer_signed(
@@ -204,8 +207,6 @@ impl<'a> ClaimRewards<'a> {
                 seeds,
             )?;
         }
-
-        drop(farmer_position_data);
 
         // close farmer position account
         Account::close(self.accounts.farmer_position, self.accounts.farmer)
