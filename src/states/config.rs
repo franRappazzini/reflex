@@ -53,4 +53,11 @@ impl Config {
     pub fn briber_fee_bps(&self) -> u16 {
         u16::from_le_bytes(self.briber_fee_bps)
     }
+
+    #[inline(always)]
+    pub fn update(&mut self, new_authority: &Address, new_fee_bps: u16, new_briber_fee_bps: u16) {
+        self.authority = new_authority.to_bytes();
+        self.fee_bps = new_fee_bps.to_le_bytes();
+        self.briber_fee_bps = new_briber_fee_bps.to_le_bytes();
+    }
 }
