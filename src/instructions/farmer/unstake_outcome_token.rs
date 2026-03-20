@@ -89,65 +89,69 @@ impl<'a> UnstakeOutcomeToken<'a> {
     pub const DISCRIMINATOR: &'a u8 = &8;
 
     pub fn process(&self) -> ProgramResult {
-        // check market and its data ( mint)
-        let mut market_data = self.accounts.market.try_borrow_mut()?;
-        let market = Market::load_mut(&mut market_data)?;
+        let (market_bump, should_close_position) = {
+            // check market and its data (mint)
+            let mut market_data = self.accounts.market.try_borrow_mut()?;
+            let market = Market::load_mut(&mut market_data)?;
 
-        let market_address = Address::derive_address(
-            &[constants::MARKET_SEED, self.data.market_id],
-            Some(market.bump),
-            &crate::ID,
-        );
-        if &market_address != self.accounts.market.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
-        if !market.is_open() {
-            return Err(ProgramError::InvalidAccountData);
-        }
+            let market_address = Address::derive_address(
+                &[constants::MARKET_SEED, self.data.market_id],
+                Some(market.bump),
+                &crate::ID,
+            );
+            if &market_address != self.accounts.market.address() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+            if !market.is_open() {
+                return Err(ProgramError::InvalidAccountData);
+            }
 
-        // check farmer position and its data (mint)
-        let mut farmer_position_data = self.accounts.farmer_position.try_borrow_mut()?;
-        let farmer_position = FarmerPosition::load_mut(&mut farmer_position_data)?;
+            // check farmer position and its data (mint)
+            let mut farmer_position_data = self.accounts.farmer_position.try_borrow_mut()?;
+            let farmer_position = FarmerPosition::load_mut(&mut farmer_position_data)?;
 
-        let farmer_position_address = Address::derive_address(
-            &[
-                constants::FARMER_POSITION_SEED,
-                self.accounts.market.address().as_ref(),
-                self.accounts.farmer.address().as_ref(),
-            ],
-            Some(farmer_position.bump),
-            &crate::ID,
-        );
-        if &farmer_position_address != self.accounts.farmer_position.address() {
-            return Err(ProgramError::InvalidAccountData);
-        }
+            let farmer_position_address = Address::derive_address(
+                &[
+                    constants::FARMER_POSITION_SEED,
+                    self.accounts.market.address().as_ref(),
+                    self.accounts.farmer.address().as_ref(),
+                ],
+                Some(farmer_position.bump),
+                &crate::ID,
+            );
+            if &farmer_position_address != self.accounts.farmer_position.address() {
+                return Err(ProgramError::InvalidAccountData);
+            }
 
-        // update accounts
-        if &market.outcome_yes_mint() == self.accounts.outcome_mint.address() {
-            market.sub_yes_staked(self.data.amount)?;
-            farmer_position.sub_yes_staked(self.data.amount)?;
-        } else if &market.outcome_no_mint() == self.accounts.outcome_mint.address() {
-            market.sub_no_staked(self.data.amount)?;
-            farmer_position.sub_no_staked(self.data.amount)?;
-        } else {
-            return Err(ProgramError::InvalidAccountData);
-        }
+            // update accounts
+            if &market.outcome_yes_mint() == self.accounts.outcome_mint.address() {
+                market.sub_yes_staked(self.data.amount)?;
+                farmer_position.sub_yes_staked(self.data.amount)?;
+            } else if &market.outcome_no_mint() == self.accounts.outcome_mint.address() {
+                market.sub_no_staked(self.data.amount)?;
+                farmer_position.sub_no_staked(self.data.amount)?;
+            } else {
+                return Err(ProgramError::InvalidAccountData);
+            }
+
+            (
+                market.bump,
+                farmer_position.yes_staked() == 0 && farmer_position.no_staked() == 0,
+            )
+        };
 
         // if stakes = 0, close position
-        if farmer_position.yes_staked() == 0 && farmer_position.no_staked() == 0 {
-            drop(farmer_position_data);
+        if should_close_position {
             Account::close(self.accounts.farmer_position, self.accounts.farmer)?;
         }
 
         // transfer back to farmer ata
-        let bump_binding = &[market.bump];
+        let bump_binding = &[market_bump];
         let seeds = &[
             Seed::from(constants::MARKET_SEED),
             Seed::from(self.data.market_id),
             Seed::from(bump_binding),
         ];
-
-        drop(market_data);
 
         MintInterface::transfer_signed(
             self.accounts.market_outcome_vault,
