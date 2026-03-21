@@ -48,20 +48,31 @@ impl<'a> TryFrom<&'a [AccountView]> for UnstakeOutcomeTokenAccounts<'a> {
 
     fn try_from(accounts: &'a [AccountView]) -> Result<Self, Self::Error> {
         let [
-            farmer,          // TODO
-            market,          // TODO
-            farmer_position, // TODO
-            outcome_mint,    // TODO
+            farmer,
+            market,
+            farmer_position,
+            outcome_mint,
             farmer_ata,
-            market_outcome_vault, // TODO
+            market_outcome_vault,
             _token_program,
-            // _system_program,
         ] = accounts
         else {
             return Err(ProgramError::NotEnoughAccountKeys);
         };
 
         Account::signer_check(farmer)?;
+
+        let (market_outcome_vault_address, _) = Address::find_program_address(
+            &[
+                constants::MARKET_SEED,
+                market.address().as_ref(),
+                outcome_mint.address().as_ref(),
+            ],
+            &crate::ID,
+        );
+        if &market_outcome_vault_address != market_outcome_vault.address() {
+            return Err(ProgramError::InvalidAccountData);
+        }
 
         Ok(Self {
             farmer,
@@ -125,11 +136,11 @@ impl<'a> UnstakeOutcomeToken<'a> {
 
             // update accounts
             if &market.outcome_yes_mint() == self.accounts.outcome_mint.address() {
-                market.sub_yes_staked(self.data.amount)?;
                 farmer_position.sub_yes_staked(self.data.amount)?;
+                market.sub_yes_staked(self.data.amount)?;
             } else if &market.outcome_no_mint() == self.accounts.outcome_mint.address() {
-                market.sub_no_staked(self.data.amount)?;
                 farmer_position.sub_no_staked(self.data.amount)?;
+                market.sub_no_staked(self.data.amount)?;
             } else {
                 return Err(ProgramError::InvalidAccountData);
             }

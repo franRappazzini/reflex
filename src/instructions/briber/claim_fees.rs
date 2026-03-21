@@ -52,6 +52,18 @@ impl<'a> TryFrom<&'a [AccountView]> for ClaimFeesAccounts<'a> {
 
         Account::signer_check(briber)?;
 
+        let (market_outcome_vault_address, _bump) = Address::find_program_address(
+            &[
+                constants::MARKET_SEED,
+                market.address().as_ref(),
+                outcome_mint.address().as_ref(),
+            ],
+            &crate::ID,
+        );
+        if &market_outcome_vault_address != market_outcome_vault.address() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         Ok(Self {
             briber,
             market,

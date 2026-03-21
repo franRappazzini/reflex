@@ -41,7 +41,7 @@ impl<'a> TryFrom<&'a [u8]> for InitializeData {
         let fee_bps = u16::from_le_bytes(data[..2].try_into().unwrap());
         let briber_fee_bps = u16::from_le_bytes(data[2..4].try_into().unwrap());
 
-        if fee_bps > 10_000 || briber_fee_bps > 10_000 {
+        if fee_bps > 5_000 || briber_fee_bps > 5_000 {
             return Err(ProgramError::InvalidInstructionData);
         }
 

@@ -33,6 +33,10 @@ impl<'a> TryFrom<&'a [u8]> for UpdateConfigData {
         let new_fee_bps = u16::from_le_bytes(data[32..34].try_into().unwrap());
         let new_briber_fee_bps = u16::from_le_bytes(data[34..36].try_into().unwrap());
 
+        if new_fee_bps > 5_000 || new_briber_fee_bps > 5_000 {
+            return Err(ProgramError::InvalidInstructionData);
+        }
+
         Ok(Self {
             new_authority,
             new_fee_bps,
