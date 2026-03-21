@@ -98,7 +98,10 @@ impl<'a> SettleMarket<'a> {
         if &market_address != self.accounts.market.address() {
             return Err(ProgramError::InvalidAccountData);
         }
-
+        if market.is_settled() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        
         market.set_resolution(self.data.resolution);
 
         Ok(())

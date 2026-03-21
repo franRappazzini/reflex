@@ -14,7 +14,6 @@ pub struct CancelMarket<'a> {
 struct CancelMarketAccounts<'a> {
     briber: &'a AccountView,
     market: &'a AccountView,
-    incentive_mint: &'a AccountView,
     briber_ata: &'a AccountView,
     market_incentive_vault: &'a AccountView,
     market_yes_vault: &'a AccountView,
@@ -44,7 +43,6 @@ impl<'a> TryFrom<&'a [AccountView]> for CancelMarketAccounts<'a> {
         let [
             briber,
             market,
-            incentive_mint,
             briber_ata,
             market_incentive_vault,
             market_yes_vault,
@@ -60,7 +58,6 @@ impl<'a> TryFrom<&'a [AccountView]> for CancelMarketAccounts<'a> {
         Ok(Self {
             briber,
             market,
-            incentive_mint,
             briber_ata,
             market_incentive_vault,
             market_yes_vault,
@@ -104,7 +101,44 @@ impl<'a> CancelMarket<'a> {
             if &market.briber() != self.accounts.briber.address() {
                 return Err(ProgramError::InvalidAccountData);
             }
-            if &market.incentive_mint() != self.accounts.incentive_mint.address() {
+            if market.is_settled() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+
+            // check market vaults
+            let (market_incentive_vault_address, _) = Address::find_program_address(
+                &[
+                    constants::MARKET_SEED,
+                    self.accounts.market.address().as_ref(),
+                    market.incentive_mint().as_ref(),
+                ],
+                &crate::ID,
+            );
+            if &market_incentive_vault_address != self.accounts.market_incentive_vault.address() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+
+            let (market_yes_vault_address, _) = Address::find_program_address(
+                &[
+                    constants::MARKET_SEED,
+                    self.accounts.market.address().as_ref(),
+                    market.outcome_yes_mint().as_ref(),
+                ],
+                &crate::ID,
+            );
+            if &market_yes_vault_address != self.accounts.market_yes_vault.address() {
+                return Err(ProgramError::InvalidAccountData);
+            }
+
+            let (market_no_vault_address, _) = Address::find_program_address(
+                &[
+                    constants::MARKET_SEED,
+                    self.accounts.market.address().as_ref(),
+                    market.outcome_no_mint().as_ref(),
+                ],
+                &crate::ID,
+            );
+            if &market_no_vault_address != self.accounts.market_no_vault.address() {
                 return Err(ProgramError::InvalidAccountData);
             }
 

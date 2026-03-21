@@ -55,7 +55,6 @@ export async function buildCancelMarketIx(
     accounts: [
       { address: accounts.briber.address, role: AccountRole.WRITABLE_SIGNER },
       { address: marketPda, role: AccountRole.WRITABLE },
-      { address: constants.WSOL_MINT, role: AccountRole.READONLY },
       { address: briberAta, role: AccountRole.WRITABLE },
       { address: marketIncentiveVaultPda, role: AccountRole.WRITABLE },
       { address: marketYesVaultPda, role: AccountRole.WRITABLE },

@@ -85,7 +85,7 @@ describe("reflex", () => {
     expect(configAfter.bump).to.equal(configBefore.bump);
   });
 
-  it.skip("--- create_market ix ---", async () => {
+  it("--- create_market ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
     const amount = BigInt(10 * LAMPORTS_PER_SOL);
 
@@ -110,7 +110,7 @@ describe("reflex", () => {
     expect(market.incentiveMint).to.equal(constants.WSOL_MINT);
   });
 
-  it.skip("--- add_incentives ix ---", async () => {
+  it("--- add_incentives ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
     const amount = BigInt(5 * LAMPORTS_PER_SOL);
 
@@ -128,8 +128,22 @@ describe("reflex", () => {
     expect(market.totalIncentiveAmount).to.equal(marketBefore.totalIncentiveAmount + amount);
   });
 
-  it.skip("--- cancel_market ix ---", async () => {
-    const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
+  it("--- cancel_market ix ---", async () => {
+    // first create a new market since the main one will be settled in a later test
+    const id = "KXNCAAFGAME-26JAN19MIAIND-IND-2";
+    const amount = BigInt(1 * LAMPORTS_PER_SOL);
+
+    const ixs = await buildCreateMarketIxs(client, accounts, {
+      id,
+      amount,
+      yesMint,
+      noMint,
+    });
+
+    await buildAndSendTransaction(client, ixs, {
+      feePayer: accounts.briber,
+      additionalSigners: [client.wallet],
+    });
 
     // cancel_market transfers all incentives back to the briber and closes
     // market + vault accounts. It requires no pending fees on the market.
@@ -149,7 +163,7 @@ describe("reflex", () => {
     expect(market).to.be.null;
   });
 
-  it.skip("--- stake_outcome_token ix ---", async () => {
+  it("--- stake_outcome_token ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
     const stakeAmount = BigInt(100_000_000); // 100 token (6 decimals)
 
@@ -203,7 +217,7 @@ describe("reflex", () => {
     expect(marketAfter.availableNoFees).to.equal(0n);
   });
 
-  it.skip("--- unstake_outcome_token ix ---", async () => {
+  it("--- unstake_outcome_token ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
 
     const marketAddress = await getMarketPda(id);
@@ -245,7 +259,7 @@ describe("reflex", () => {
     expect(positionAfter.noStaked).to.equal(0n);
   });
 
-  it.skip("--- settle_market ix ---", async () => {
+  it("--- settle_market ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
 
     const ix = await buildSettleMarketIx(client, {
@@ -265,7 +279,7 @@ describe("reflex", () => {
 
   // claim_fees requires a settled market. A fresh market is created here since
   // the main one was already cancelled. It is settled inline before claiming.
-  it.skip("--- claim_fees ix ---", async () => {
+  it("--- claim_fees ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
 
     // read on-chain state to pick the correct outcome mint.
@@ -287,7 +301,7 @@ describe("reflex", () => {
     expect(marketAfter.availableNoFees).to.equal(0n);
   });
 
-  it.skip("--- claim_rewards ix ---", async () => {
+  it("--- claim_rewards ix ---", async () => {
     const id = "KXNCAAFGAME-26JAN19MIAIND-IND";
 
     const marketAddress = await getMarketPda(id);
@@ -323,7 +337,7 @@ describe("reflex", () => {
     expect(positionBefore.yesStaked > 0n).to.be.true;
   });
 
-  it.skip("--- withdraw_treasury ix ---", async () => {
+  it("--- withdraw_treasury ix ---", async () => {
     // treasury PDAs into them.
     const ixs = await buildWithdrawTreasuryIxs(client);
     const txSig = await buildAndSendTransaction(client, ixs);

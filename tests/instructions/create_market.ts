@@ -2,7 +2,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
   TOKEN_PROGRAM_ADDRESS,
   findAssociatedTokenPda,
-  getCreateAssociatedTokenInstructionAsync,
+  getCreateAssociatedTokenIdempotentInstructionAsync,
   getSyncNativeInstruction,
 } from "@solana-program/token";
 import { AccountRole, Address, Instruction, KeyPairSigner } from "@solana/kit";
@@ -68,7 +68,7 @@ export async function buildCreateMarketIxs(
       getMarketVaultPda(marketPda, noMint.address),
     ]);
 
-  const createBriberAtaIx = await getCreateAssociatedTokenInstructionAsync({
+  const createBriberAtaIx = await getCreateAssociatedTokenIdempotentInstructionAsync({
     payer: accounts.briber,
     ata: briberAta,
     owner: accounts.briber.address,
