@@ -29,7 +29,8 @@ impl<'a> TryFrom<&'a [u8]> for StakeOutcomeTokenData<'a> {
     type Error = ProgramError;
 
     fn try_from(data: &'a [u8]) -> Result<Self, Self::Error> {
-        if data.len() < size_of::<Self>() {
+        // 8 bytes for amount, rest for market ID
+        if data.len() < constants::MIN_ID_LENGTH + 8 {
             return Err(ProgramError::InvalidInstructionData);
         }
 

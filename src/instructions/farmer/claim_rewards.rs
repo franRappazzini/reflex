@@ -30,7 +30,7 @@ impl<'a> TryFrom<&'a [u8]> for ClaimRewardsData<'a> {
     type Error = ProgramError;
 
     fn try_from(data: &'a [u8]) -> Result<Self, Self::Error> {
-        if data.len() < size_of::<Self>() {
+        if data.len() < constants::MIN_ID_LENGTH {
             return Err(ProgramError::InvalidInstructionData);
         }
 

@@ -26,7 +26,8 @@ impl<'a> TryFrom<&'a [u8]> for SettleMarketData<'a> {
     type Error = ProgramError;
 
     fn try_from(data: &'a [u8]) -> Result<Self, Self::Error> {
-        if data.len() < size_of::<Self>() {
+        // 1 byte for resolution, rest for ID
+        if data.len() < constants::MIN_ID_LENGTH + 1 {
             return Err(ProgramError::InvalidInstructionData);
         };
 
@@ -101,7 +102,7 @@ impl<'a> SettleMarket<'a> {
         if market.is_settled() {
             return Err(ProgramError::InvalidAccountData);
         }
-        
+
         market.set_resolution(self.data.resolution);
 
         Ok(())
