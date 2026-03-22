@@ -12,16 +12,6 @@ impl FarmerPosition {
     pub const LEN: usize = size_of::<Self>();
 
     #[inline(always)]
-    pub fn load(data: &[u8]) -> Result<&Self, ProgramError> {
-        if data.len() != Self::LEN {
-            return Err(ProgramError::InvalidAccountData);
-        };
-
-        // SAFETY: everything is u8 aligned and length checked
-        Ok(unsafe { &*(data.as_ptr() as *const Self) })
-    }
-
-    #[inline(always)]
     pub fn load_mut(data: &mut [u8]) -> Result<&mut Self, ProgramError> {
         if data.len() != Self::LEN {
             return Err(ProgramError::InvalidAccountData);

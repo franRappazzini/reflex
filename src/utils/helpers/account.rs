@@ -21,17 +21,6 @@ impl Account {
         Ok(())
     }
 
-    pub fn not_initialized_check(account: &AccountView) -> ProgramResult {
-        if !account.is_data_empty()
-            || account.lamports() > 0
-            || !account.owned_by(&pinocchio_system::ID)
-        {
-            return Err(ProgramError::AccountAlreadyInitialized);
-        }
-
-        Ok(())
-    }
-
     pub fn init_pda<T>(
         account: &AccountView,
         payer: &AccountView,
