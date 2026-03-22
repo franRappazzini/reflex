@@ -2,6 +2,8 @@
 
 **Reflex** is a Solana on-chain program built with [Pinocchio](https://github.com/anza-xyz/pinocchio) that implements an incentive vault system for [Kalshi](https://kalshi.com/) prediction markets, running on [DFlow](https://dflow.net/)'s infrastructure. It allows any party (a _briber_) to bootstrap liquidity on a prediction market by depositing token incentive rewards that are distributed to participants (_farmers_) who take a side and stake their outcome tokens.
 
+[Reflex client repository](https://github.com/franRappazzini/reflex-client)
+
 ---
 
 ## Why Reflex?
