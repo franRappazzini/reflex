@@ -1,0 +1,102 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
+
+use crate::{constants::*, Config, Pool};
+
+#[derive(Accounts)]
+pub struct CreatePool<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(
+        seeds = [CONFIG_SEED],
+        bump = config.bump
+    )]
+    pub config: Account<'info, Config>,
+
+    #[account(
+        init,
+        payer = signer,
+        space = Pool::SIZE,
+        seeds = [POOL_SEED, market.key().as_ref()],
+        bump
+    )]
+    pub pool: Account<'info, Pool>,
+
+    /// CHECK: by owner and data len
+    #[account(owner = *predict_program.key, constraint = market.data_len() == 320)]
+    pub market: UncheckedAccount<'info>,
+
+    // TODO: whitelisted tokens: usdc or wsol
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        init,
+        payer = signer,
+        token::mint = mint,
+        token::authority = pool,
+        seeds = [VAULT_SEED, pool.key().as_ref()],
+        bump
+    )]
+    pub pool_vault: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        associated_token::mint = mint,
+        associated_token::authority = signer
+    )]
+    pub signer_ata: InterfaceAccount<'info, TokenAccount>,
+
+    /// CHECK: by id
+    // #[account(address = Pubkey::from_str(""))]
+    pub predict_program: UncheckedAccount<'info>,
+    pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> CreatePool<'info> {
+    pub fn proccess_ix(&mut self, amount: u64, bumps: CreatePoolBumps) -> Result<()> {
+        let market_ptr = self.market.try_borrow_data().unwrap().as_ptr();
+
+        let yes_outcome_mint = unsafe { *(market_ptr.add(72) as *const Pubkey) };
+        let no_outcome_mint = unsafe { *(market_ptr.add(104) as *const Pubkey) };
+
+        msg!("yes: {}", yes_outcome_mint);
+        msg!("no: {}", no_outcome_mint);
+
+        // transfer incentives to vault
+        let cpi_accounts = token_interface::TransferChecked {
+            authority: self.signer.to_account_info(),
+            from: self.signer_ata.to_account_info(),
+            mint: self.mint.to_account_info(),
+            to: self.pool_vault.to_account_info(),
+        };
+
+        let cpi_ctx = CpiContext::new(*self.token_program.key, cpi_accounts);
+
+        token_interface::transfer_checked(cpi_ctx, amount, self.mint.decimals)?;
+
+        // set pool account
+        let now = Clock::get()?.unix_timestamp;
+
+        self.pool.set_inner(Pool {
+            creator: *self.signer.key,
+            incentive_mint: self.mint.key(),
+            yes_outcome_mint,
+            no_outcome_mint,
+            total_incentive_amount: amount,
+            total_yes_staked: 0,
+            total_no_staked: 0,
+            available_yes_fees: 0,
+            available_no_fees: 0,
+            creation_timestamp: now,
+            update_timestamp: now,
+            fee_bps: self.config.fee_bps,
+            status: crate::PoolStatus::Open,
+            vault_bump: bumps.pool_vault,
+            bump: bumps.pool,
+        });
+
+        Ok(())
+    }
+}
