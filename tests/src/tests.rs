@@ -1,3 +1,4 @@
+mod add_incentives;
 mod create_pool;
 mod initialize;
 mod stake_outcome;
@@ -9,7 +10,8 @@ use serde_json::json;
 use solana_signer::Signer;
 
 use crate::utils::{
-    fetch_account, setup, PoolSetup, TestContext, INITIAL_POOL_FUNDING_AMOUNT, INITIAL_STAKE_AMOUNT,
+    fetch_account, setup, PoolSetup, TestContext, ADDITIONAL_INCENTIVE_AMOUNT,
+    INITIAL_POOL_FUNDING_AMOUNT, INITIAL_STAKE_AMOUNT,
 };
 
 #[test]
@@ -24,6 +26,8 @@ fn test_reflex_lifecycle() {
     stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT);
 
     advance_time(7);
+
+    add_incentives::run(&ctx, &pool.incentive, ADDITIONAL_INCENTIVE_AMOUNT);
 
     stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT / 2);
 
@@ -46,10 +50,13 @@ fn assert_pool_and_position(ctx: &TestContext, setup: &PoolSetup) {
     println!("no secs: {}", pool.no_stake_seconds);
 
     assert_eq!(pool.creator, ctx.accounts.creator.pubkey());
-    assert_eq!(pool.incentive_mint, setup.incentive_mint);
+    assert_eq!(pool.incentive_mint, setup.incentive.mint);
     assert_eq!(pool.yes_outcome_mint, setup.yes.mint);
     assert_eq!(pool.no_outcome_mint, setup.no.mint);
-    assert_eq!(pool.total_incentive_amount, INITIAL_POOL_FUNDING_AMOUNT);
+    assert_eq!(
+        pool.total_incentive_amount,
+        INITIAL_POOL_FUNDING_AMOUNT + ADDITIONAL_INCENTIVE_AMOUNT
+    );
     assert_eq!(
         pool.total_yes_staked,
         INITIAL_STAKE_AMOUNT + (INITIAL_STAKE_AMOUNT / 2)

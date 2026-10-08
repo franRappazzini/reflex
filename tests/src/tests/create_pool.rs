@@ -4,9 +4,9 @@ use anchor_client::Transaction;
 use solana_signer::Signer;
 
 use crate::utils::{
-    derive_outcome_vault, prepare_mint_and_ata, OutcomeSetup, PoolSetup, TestContext,
-    HARDCODED_MARKET, INITIAL_MINT_AMOUNT, INITIAL_OUTCOME_AMOUNT, INITIAL_POOL_FUNDING_AMOUNT,
-    PREDICT_PROGRAM_ID, USDC_DECIMALS,
+    derive_outcome_vault, prepare_mint_and_ata, IncentiveSetup, OutcomeSetup, PoolSetup,
+    TestContext, HARDCODED_MARKET, INITIAL_MINT_AMOUNT, INITIAL_OUTCOME_AMOUNT,
+    INITIAL_POOL_FUNDING_AMOUNT, PREDICT_PROGRAM_ID, USDC_DECIMALS,
 };
 
 pub(super) fn run(ctx: &TestContext) -> PoolSetup {
@@ -106,7 +106,10 @@ pub(super) fn run(ctx: &TestContext) -> PoolSetup {
     println!("✅ Create pool transaction: {signature}");
 
     PoolSetup {
-        incentive_mint: incentive_mint_address,
+        incentive: IncentiveSetup {
+            mint: incentive_mint_address,
+            ata: incentive_mint.ata,
+        },
         yes: yes_setup,
         no: no_setup,
     }

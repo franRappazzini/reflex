@@ -18,7 +18,7 @@ use spl_token_interface::instruction::{initialize_mint2, mint_to};
 // -----------------------------------------------------------------------------
 pub const PROGRAM_ID: Pubkey = pubkey!("8i3X3C7WaRGxKLTpoecUqmPEueMULXVTRzEJFuyGrTHd");
 pub const PREDICT_PROGRAM_ID: Pubkey = pubkey!("prediCtPZCttYMvm2W3PtxmMxLmT1dtN7riU6Cxh6tM");
-pub const HARDCODED_MARKET: Pubkey = pubkey!("JE36UZNtBHAQzTHG2o8xp2hx9K5VxoQNu2qkVXfMJB4q");
+pub const HARDCODED_MARKET: Pubkey = pubkey!("JDryy7Dowir9XXAaW2Gyosc5Hdm2hRv1KyU4HC3wR92B");
 
 pub const ONE_SOL: u64 = 1_000_000_000;
 pub const USDC_DECIMALS: u8 = 6;
@@ -26,6 +26,7 @@ pub const INITIAL_MINT_AMOUNT: u64 = 10_000_000_000; // 10k USDC
 pub const INITIAL_OUTCOME_AMOUNT: u64 = 5_000_000_000;
 pub const INITIAL_STAKE_AMOUNT: u64 = 1_000_000_000;
 pub const INITIAL_POOL_FUNDING_AMOUNT: u64 = 1_000_000_000;
+pub const ADDITIONAL_INCENTIVE_AMOUNT: u64 = 500_000_000;
 
 // -----------------------------------------------------------------------------
 // structs
@@ -65,8 +66,13 @@ pub struct OutcomeSetup {
     pub vault: Pubkey,
 }
 
+pub struct IncentiveSetup {
+    pub mint: Pubkey,
+    pub ata: Pubkey,
+}
+
 pub struct PoolSetup {
-    pub incentive_mint: Pubkey,
+    pub incentive: IncentiveSetup,
     pub yes: OutcomeSetup,
     pub no: OutcomeSetup,
 }
