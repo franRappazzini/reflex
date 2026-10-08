@@ -10,4 +10,6 @@ pub enum ReflexError {
     MathOverflow,
     #[msg("The market is not open")]
     MarketIsNotOpen,
+    #[msg("The Pool can not be settled")]
+    CanNotSettle,
 }

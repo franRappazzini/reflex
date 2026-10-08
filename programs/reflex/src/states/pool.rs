@@ -107,6 +107,10 @@ impl Pool {
     pub fn is_open(&self) -> bool {
         self.status == PoolStatus::Open
     }
+
+    pub fn can_settle(&self) -> bool {
+        self.is_open() || self.status == PoolStatus::Resolving
+    }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, InitSpace, Clone, PartialEq)]
@@ -114,5 +118,6 @@ pub enum PoolStatus {
     Open,
     Yes,
     No,
+    Resolving,
     Cancelled,
 }

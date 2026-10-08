@@ -16,7 +16,7 @@ pub struct StakeOutcome<'info> {
     )]
     pub pool: Account<'info, Pool>,
 
-    /// CHECK: by owner and data len (if the market is closed the data len is 1)
+    /// CHECK: by owner and data len
     #[account(owner = *predict_program.key, constraint = market.data_len() == 320)]
     pub market: UncheckedAccount<'info>,
 

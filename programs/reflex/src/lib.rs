@@ -30,4 +30,8 @@ pub mod reflex {
     pub fn stake_outcome(ctx: Context<StakeOutcome>, amount: u64) -> Result<()> {
         ctx.accounts.proccess_ix(amount, ctx.bumps)
     }
+
+    pub fn settle_pool(ctx: Context<SettlePool>, decision: PoolStatus) -> Result<()> {
+        ctx.accounts.proccess_ix(decision)
+    }
 }

@@ -1,6 +1,7 @@
 mod add_incentives;
 mod create_pool;
 mod initialize;
+mod settle_pool;
 mod stake_outcome;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -32,6 +33,11 @@ fn test_reflex_lifecycle() {
     stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT / 2);
 
     assert_pool_and_position(&ctx, &pool);
+
+    settle_pool::run(&ctx, reflex::PoolStatus::Resolving);
+
+    // should fail
+    stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT / 2);
 }
 
 fn assert_initialized(ctx: &TestContext) {
