@@ -57,6 +57,12 @@ pub struct StakeOutcome<'info> {
 impl<'info> StakeOutcome<'info> {
     // TODO: calculate fees
     pub fn proccess_ix(&mut self, amount: u64, bumps: StakeOutcomeBumps) -> Result<()> {
+        require!(
+            self.outcome_mint.key() == self.pool.yes_outcome_mint
+                || self.outcome_mint.key() == self.pool.no_outcome_mint,
+            ReflexError::WrongMint
+        );
+
         // stake outcome tokens
         let cpi_accounts = token_interface::TransferChecked {
             authority: self.staker.to_account_info(),
