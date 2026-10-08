@@ -12,4 +12,8 @@ pub enum ReflexError {
     MarketIsNotOpen,
     #[msg("The Pool can not be settled")]
     CanNotSettle,
+    #[msg("The Pool is not settled")]
+    PooltNotSettled,
+    #[msg("The rewards must be greater than zero")]
+    ZeroRewards,
 }

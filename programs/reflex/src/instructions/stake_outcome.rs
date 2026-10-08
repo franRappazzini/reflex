@@ -81,17 +81,19 @@ impl<'info> StakeOutcome<'info> {
             self.position.bump = bumps.position;
         }
 
+        let now = Clock::get()?.unix_timestamp;
+
         // update position and pool based on the outcome
         if self.outcome_mint.key() == self.pool.yes_outcome_mint {
-            self.pool.accrue_yes()?;
-            self.position.accrue_yes()?;
+            self.pool.accrue_yes(now)?;
+            self.position.accrue_yes(now)?;
 
             // self.pool.available_yes_fees
             self.pool.add_yes_staked(amount)?;
             self.position.add_yes_staked(amount)?;
         } else if self.outcome_mint.key() == self.pool.no_outcome_mint {
-            self.pool.accrue_no()?;
-            self.position.accrue_no()?;
+            self.pool.accrue_no(now)?;
+            self.position.accrue_no(now)?;
 
             // self.pool.available_no_fees
             self.pool.add_no_staked(amount)?;

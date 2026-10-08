@@ -18,8 +18,7 @@ pub struct Position {
 impl Position {
     pub const SIZE: usize = DISCRIMINATOR_SIZE + Position::INIT_SPACE;
 
-    pub fn accrue_yes(&mut self) -> Result<()> {
-        let now = Clock::get()?.unix_timestamp;
+    pub fn accrue_yes(&mut self, now: i64) -> Result<()> {
         let dt = now
             .checked_sub(self.yes_last_update_ts)
             .ok_or(ReflexError::MathOverflow)?;
@@ -40,8 +39,7 @@ impl Position {
         Ok(())
     }
 
-    pub fn accrue_no(&mut self) -> Result<()> {
-        let now = Clock::get()?.unix_timestamp;
+    pub fn accrue_no(&mut self, now: i64) -> Result<()> {
         let dt = now
             .checked_sub(self.no_last_update_ts)
             .ok_or(ReflexError::MathOverflow)?;

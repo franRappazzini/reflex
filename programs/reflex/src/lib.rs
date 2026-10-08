@@ -34,4 +34,8 @@ pub mod reflex {
     pub fn settle_pool(ctx: Context<SettlePool>, decision: PoolStatus) -> Result<()> {
         ctx.accounts.proccess_ix(decision)
     }
+
+    pub fn claim_rewards(ctx: Context<ClaimRewards>) -> Result<()> {
+        ctx.accounts.proccess_ix()
+    }
 }

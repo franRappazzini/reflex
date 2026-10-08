@@ -4,7 +4,7 @@ use solana_signer::Signer;
 
 use crate::utils::{OutcomeSetup, TestContext, HARDCODED_MARKET, PREDICT_PROGRAM_ID};
 
-pub(super) fn run(ctx: &TestContext, outcome: &OutcomeSetup, amount: u64) {
+pub(super) fn run(ctx: &TestContext, outcome: &OutcomeSetup, amount: u64) -> Result<(), String> {
     let signature = ctx
         .program
         .request()
@@ -23,7 +23,8 @@ pub(super) fn run(ctx: &TestContext, outcome: &OutcomeSetup, amount: u64) {
         .args(reflex::instruction::StakeOutcome { amount })
         .payer(Rc::from(ctx.accounts.staker.insecure_clone()))
         .send()
-        .expect("stake outcome transaction failed");
+        .map_err(|error| error.to_string())?;
 
     println!("✅ Stake outcome transaction: {signature}");
+    Ok(())
 }

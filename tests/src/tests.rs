@@ -1,4 +1,5 @@
 mod add_incentives;
+mod claim_rewards;
 mod create_pool;
 mod initialize;
 mod settle_pool;
@@ -23,21 +24,25 @@ fn test_reflex_lifecycle() {
     assert_initialized(&ctx);
 
     let pool = create_pool::run(&ctx);
-    stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT);
-    stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT);
+    stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT).expect("initial YES stake failed");
+    stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT).expect("initial NO stake failed");
 
     advance_time(7);
 
     add_incentives::run(&ctx, &pool.incentive, ADDITIONAL_INCENTIVE_AMOUNT);
 
-    stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT / 2);
+    stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT / 2)
+        .expect("additional YES stake before settlement failed");
 
     assert_pool_and_position(&ctx, &pool);
 
-    settle_pool::run(&ctx, reflex::PoolStatus::Resolving);
+    settle_pool::run(&ctx, reflex::PoolStatus::Yes);
+    claim_rewards::run(&ctx, &pool.incentive, &pool.yes);
 
-    // should fail
-    stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT / 2);
+    assert!(
+        stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT / 2).is_err(),
+        "staking should fail after the pool is settled"
+    );
 }
 
 fn assert_initialized(ctx: &TestContext) {

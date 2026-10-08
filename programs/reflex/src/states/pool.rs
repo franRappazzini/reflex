@@ -40,9 +40,7 @@ pub struct Pool {
 impl Pool {
     pub const SIZE: usize = DISCRIMINATOR_SIZE + Pool::INIT_SPACE;
 
-    pub fn accrue_yes(&mut self) -> Result<()> {
-        let now = Clock::get()?.unix_timestamp;
-
+    pub fn accrue_yes(&mut self, now: i64) -> Result<()> {
         let dt = now
             .checked_sub(self.yes_last_update_ts)
             .ok_or(ReflexError::MathOverflow)?;
@@ -63,9 +61,7 @@ impl Pool {
         Ok(())
     }
 
-    pub fn accrue_no(&mut self) -> Result<()> {
-        let now = Clock::get()?.unix_timestamp;
-
+    pub fn accrue_no(&mut self, now: i64) -> Result<()> {
         let dt = now
             .checked_sub(self.no_last_update_ts)
             .ok_or(ReflexError::MathOverflow)?;
@@ -106,6 +102,14 @@ impl Pool {
 
     pub fn is_open(&self) -> bool {
         self.status == PoolStatus::Open
+    }
+
+    pub fn is_yes(&self) -> bool {
+        self.status == PoolStatus::Yes
+    }
+
+    pub fn is_no(&self) -> bool {
+        self.status == PoolStatus::No
     }
 
     pub fn can_settle(&self) -> bool {
