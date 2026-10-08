@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, Config, Pool};
+use crate::{constants::*, error::ReflexError, Config, Pool};
 
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
@@ -30,6 +30,9 @@ pub struct CreatePool<'info> {
     // TODO: whitelisted tokens: usdc or wsol
     pub mint: InterfaceAccount<'info, Mint>,
 
+    pub yes_outcome_mint: InterfaceAccount<'info, Mint>,
+    pub no_outcome_mint: InterfaceAccount<'info, Mint>,
+
     #[account(
         init,
         payer = signer,
@@ -39,6 +42,26 @@ pub struct CreatePool<'info> {
         bump
     )]
     pub pool_vault: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        init,
+        payer = signer,
+        token::mint = yes_outcome_mint,
+        token::authority = pool,
+        seeds = [VAULT_SEED, pool.key().as_ref(), yes_outcome_mint.key().as_ref()],
+        bump
+    )]
+    pub pool_yes_vault: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        init,
+        payer = signer,
+        token::mint = no_outcome_mint,
+        token::authority = pool,
+        seeds = [VAULT_SEED, pool.key().as_ref(), no_outcome_mint.key().as_ref()],
+        bump
+    )]
+    pub pool_no_vault: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -58,11 +81,30 @@ impl<'info> CreatePool<'info> {
     pub fn proccess_ix(&mut self, amount: u64, bumps: CreatePoolBumps) -> Result<()> {
         let market_ptr = self.market.try_borrow_data().unwrap().as_ptr();
 
-        let yes_outcome_mint = unsafe { *(market_ptr.add(72) as *const Pubkey) };
-        let no_outcome_mint = unsafe { *(market_ptr.add(104) as *const Pubkey) };
+        // TEST: to avoid real mint checks
+        let yes_outcome_mint = if !cfg!(feature = "skip-checks") {
+            unsafe { *(market_ptr.add(72) as *const Pubkey) }
+        } else {
+            self.yes_outcome_mint.key()
+        };
+        // TEST: to avoid real mint checks
+        let no_outcome_mint = if !cfg!(feature = "skip-checks") {
+            unsafe { *(market_ptr.add(104) as *const Pubkey) }
+        } else {
+            self.no_outcome_mint.key()
+        };
 
         msg!("yes: {}", yes_outcome_mint);
         msg!("no: {}", no_outcome_mint);
+
+        require!(
+            yes_outcome_mint == self.yes_outcome_mint.key(),
+            ReflexError::WrongMint
+        );
+        require!(
+            no_outcome_mint == self.no_outcome_mint.key(),
+            ReflexError::WrongMint
+        );
 
         // transfer incentives to vault
         let cpi_accounts = token_interface::TransferChecked {
@@ -90,7 +132,11 @@ impl<'info> CreatePool<'info> {
             available_yes_fees: 0,
             available_no_fees: 0,
             creation_timestamp: now,
-            update_timestamp: now,
+            resolution_timestamp: 0,
+            yes_last_update_ts: now,
+            yes_stake_seconds: 0,
+            no_last_update_ts: now,
+            no_stake_seconds: 0,
             fee_bps: self.config.fee_bps,
             status: crate::PoolStatus::Open,
             vault_bump: bumps.pool_vault,

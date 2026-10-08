@@ -1,9 +1,13 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum ErrorCode {
-    #[msg("Only the counter authority can update this counter")]
+pub enum ReflexError {
+    #[msg("Only the authority can call")]
     Unauthorized,
-    #[msg("Counter has reached the maximum value")]
-    CounterOverflow,
+    #[msg("The selected mint is not correct")]
+    WrongMint,
+    #[msg("Math Overflow")]
+    MathOverflow,
+    #[msg("The market is not open")]
+    MarketIsNotOpen,
 }

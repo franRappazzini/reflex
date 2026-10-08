@@ -1,125 +1,102 @@
-use anchor_client::{
-    anchor_lang::prelude::{program_pack::Pack, system_instruction::create_account},
-    Client, Cluster, CommitmentConfig,
-};
-use solana_keypair::{read_keypair_file, Keypair};
-use solana_pubkey::{pubkey, Pubkey};
+mod create_pool;
+mod initialize;
+mod stake_outcome;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use anchor_client::anchor_lang::prelude::clock::SECONDS_PER_DAY;
+use reqwest::blocking::Client;
+use serde_json::json;
 use solana_signer::Signer;
-use spl_associated_token_account_interface::{
-    address::get_associated_token_address, instruction::create_associated_token_account,
+
+use crate::utils::{
+    fetch_account, setup, PoolSetup, TestContext, INITIAL_POOL_FUNDING_AMOUNT, INITIAL_STAKE_AMOUNT,
 };
-use spl_token_interface::instruction::{initialize_mint2, mint_to};
 
 #[test]
-fn test_initialize() {
-    let program_id = "8i3X3C7WaRGxKLTpoecUqmPEueMULXVTRzEJFuyGrTHd";
-    let anchor_wallet = std::env::var("ANCHOR_WALLET").unwrap();
-    let authority = read_keypair_file(&anchor_wallet).unwrap();
-    let creator = Keypair::new();
+fn test_reflex_lifecycle() {
+    let ctx = setup();
 
-    let client =
-        Client::new_with_options(Cluster::Localnet, &authority, CommitmentConfig::confirmed());
+    initialize::run(&ctx);
+    assert_initialized(&ctx);
 
-    let program_id = Pubkey::try_from(program_id).unwrap();
-    let program = client.program(program_id).unwrap();
+    let pool = create_pool::run(&ctx);
+    stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT);
+    stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT);
 
-    program
-        .rpc()
-        .request_airdrop(&creator.pubkey(), 1_000_000_000)
-        .unwrap(); // 1 sol
+    advance_time(7);
 
-    let config = Pubkey::find_program_address(&[reflex::constants::CONFIG_SEED], &program_id).0;
+    stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT / 2);
 
-    let initialize_tx = program
-        .request()
-        .accounts(reflex::accounts::Initialize {
-            authority: authority.pubkey(),
-            config,
-            system_program: solana_sdk_ids::system_program::id(),
-        })
-        .args(reflex::instruction::Initialize {
-            fee_bps: 500,
-            briber_fee_bps: 500,
-        })
-        .send()
-        .expect("");
+    assert_pool_and_position(&ctx, &pool);
+}
 
-    println!("Initialize tx signature {}", initialize_tx);
+fn assert_initialized(ctx: &TestContext) {
+    let config: reflex::Config = fetch_account(ctx, &ctx.pdas.config);
 
-    let predict_program = pubkey!("prediCtPZCttYMvm2W3PtxmMxLmT1dtN7riU6Cxh6tM");
-    let market = pubkey!("JE36UZNtBHAQzTHG2o8xp2hx9K5VxoQNu2qkVXfMJB4q"); // harcoded
-    let pool = Pubkey::find_program_address(
-        &[reflex::constants::POOL_SEED, market.as_ref()],
-        &program_id,
-    )
-    .0;
-    let pool_vault =
-        Pubkey::find_program_address(&[reflex::constants::VAULT_SEED, pool.as_ref()], &program_id)
-            .0;
+    assert_eq!(config.authority, ctx.accounts.authority.pubkey());
+    assert_eq!(config.fee_bps, 500);
+    assert_eq!(config.briber_fee_bps, 500);
+}
 
-    let token_program = spl_token_interface::ID;
+fn assert_pool_and_position(ctx: &TestContext, setup: &PoolSetup) {
+    let pool: reflex::Pool = fetch_account(ctx, &ctx.pdas.pool);
+    let position: reflex::Position = fetch_account(ctx, &ctx.pdas.position);
 
-    let mint = Keypair::new();
+    println!("yes secs: {}", pool.yes_stake_seconds);
+    println!("no secs: {}", pool.no_stake_seconds);
 
-    let lamports = program
-        .rpc()
-        .get_minimum_balance_for_rent_exemption(spl_token_interface::state::Mint::LEN)
-        .unwrap();
-
-    let create_mint_account = create_account(
-        &creator.pubkey(),
-        &mint.pubkey(),
-        lamports,
-        spl_token_interface::state::Mint::LEN as u64,
-        &token_program,
+    assert_eq!(pool.creator, ctx.accounts.creator.pubkey());
+    assert_eq!(pool.incentive_mint, setup.incentive_mint);
+    assert_eq!(pool.yes_outcome_mint, setup.yes.mint);
+    assert_eq!(pool.no_outcome_mint, setup.no.mint);
+    assert_eq!(pool.total_incentive_amount, INITIAL_POOL_FUNDING_AMOUNT);
+    assert_eq!(
+        pool.total_yes_staked,
+        INITIAL_STAKE_AMOUNT + (INITIAL_STAKE_AMOUNT / 2)
     );
+    assert_eq!(pool.total_no_staked, INITIAL_STAKE_AMOUNT);
+    assert!(pool.is_open());
 
-    let initialize_mint_ix =
-        initialize_mint2(&token_program, &mint.pubkey(), &creator.pubkey(), None, 6).unwrap();
-
-    let signer_ata = get_associated_token_address(&creator.pubkey(), &mint.pubkey());
-    let create_ata_ix = create_associated_token_account(
-        &creator.pubkey(),
-        &creator.pubkey(),
-        &mint.pubkey(),
-        &token_program,
+    assert_eq!(position.authority, ctx.accounts.staker.pubkey());
+    assert_eq!(
+        position.yes_staked,
+        INITIAL_STAKE_AMOUNT + (INITIAL_STAKE_AMOUNT / 2)
     );
+    assert_eq!(position.no_staked, INITIAL_STAKE_AMOUNT);
+}
 
-    let mint_to_ix = mint_to(
-        &token_program,
-        &mint.pubkey(),
-        &signer_ata,
-        &creator.pubkey(),
-        &[&creator.pubkey()],
-        10_000_000_000, // 10k usdc
-    )
-    .unwrap();
+fn advance_time(days: i64) {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as i64;
 
-    let create_pool_tx = program
-        .request()
-        .accounts(reflex::accounts::CreatePool {
-            signer: creator.pubkey(),
-            config,
-            pool,
-            market,
-            mint: mint.pubkey(),
-            pool_vault,
-            signer_ata,
-            predict_program,
-            token_program,
-            system_program: solana_sdk_ids::system_program::id(),
-        })
-        .args(reflex::instruction::CreatePool {
-            amount: 1_000_000_000, // 1k usdc
-        })
-        .instruction(create_mint_account)
-        .instruction(initialize_mint_ix)
-        .instruction(create_ata_ix)
-        .instruction(mint_to_ix)
-        .payer(&creator)
-        .signer(mint)
-        .send()
-        .expect("");
+    let absolute_timestamp = now + (days * SECONDS_PER_DAY as i64 * 1_000);
 
-    println!("Create Pool tx signature {}", create_pool_tx);
+    let client = Client::new();
+    let rpc_url = "http://127.0.0.1:8899";
+    let params = json!({
+        "absoluteTimestamp": absolute_timestamp
+    });
+
+    let payload = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "surfnet_timeTravel",
+        "params": [params]
+    });
+
+    let res = client
+        .post(rpc_url)
+        .header("Content-Type", "application/json")
+        .json(&payload)
+        .send();
+
+    if res.is_ok() {
+        println!("Advance {} days", days)
+    } else {
+        println!("❌ Fail advancing days")
+    }
+
+    // let res = res.unwrap().json::<Value>().unwrap();
 }

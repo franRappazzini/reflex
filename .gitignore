@@ -7,4 +7,5 @@ test-ledger
 .yarn
 .surfpool
 
-/keypairs/
+/tests/keypairs/
+*.todo

@@ -22,4 +22,8 @@ pub mod reflex {
     pub fn create_pool(ctx: Context<CreatePool>, amount: u64) -> Result<()> {
         ctx.accounts.proccess_ix(amount, ctx.bumps)
     }
+
+    pub fn stake_outcome(ctx: Context<StakeOutcome>, amount: u64) -> Result<()> {
+        ctx.accounts.proccess_ix(amount, ctx.bumps)
+    }
 }
