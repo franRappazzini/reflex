@@ -58,6 +58,32 @@ impl Pool {
         )
     }
 
+    pub fn stake_yes(&mut self, staked: u64, fee: u64) -> Result<()> {
+        self.total_yes_staked = self
+            .total_yes_staked
+            .checked_add(staked)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        self.available_yes_fees = self
+            .available_yes_fees
+            .checked_add(fee)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+
+        Ok(())
+    }
+
+    pub fn stake_no(&mut self, staked: u64, fee: u64) -> Result<()> {
+        self.total_no_staked = self
+            .total_no_staked
+            .checked_add(staked)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+        self.available_no_fees = self
+            .available_no_fees
+            .checked_add(fee)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+
+        Ok(())
+    }
+
     pub fn effective_ts(&self, now: i64) -> i64 {
         if self.is_yes() || self.is_no() {
             self.resolution_timestamp

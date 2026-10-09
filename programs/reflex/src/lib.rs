@@ -43,4 +43,8 @@ pub mod reflex {
     pub fn claim_rewards(ctx: Context<ClaimRewards>) -> Result<()> {
         ctx.accounts.proccess_ix()
     }
+
+    pub fn collect_fees(ctx: Context<CollectFees>) -> Result<()> {
+        ctx.accounts.proccess_ix()
+    }
 }

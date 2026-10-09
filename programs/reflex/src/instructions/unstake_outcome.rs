@@ -80,10 +80,10 @@ impl<'info> UnstakeOutcome<'info> {
 
         *pool_staked = pool_staked
             .checked_sub(amount)
-            .ok_or(ReflexError::MathOverflow)?;
+            .ok_or(ProgramError::ArithmeticOverflow)?;
         *position_staked = position_staked
             .checked_sub(amount)
-            .ok_or(ReflexError::MathOverflow)?;
+            .ok_or(ProgramError::ArithmeticOverflow)?;
 
         // transfer outcome back to staker
         let market_binding = self.market.key();

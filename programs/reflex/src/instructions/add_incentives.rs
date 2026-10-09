@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::ReflexError, Pool};
+use crate::{constants::*, Pool};
 
 #[derive(Accounts)]
 pub struct AddIncentives<'info> {
@@ -64,7 +64,7 @@ impl<'info> AddIncentives<'info> {
             .pool
             .total_incentive_amount
             .checked_add(amount)
-            .ok_or(ReflexError::MathOverflow)?;
+            .ok_or(ProgramError::ArithmeticOverflow)?;
 
         Ok(())
     }

@@ -78,6 +78,7 @@ pub struct ClaimRewards<'info> {
 
 impl<'info> ClaimRewards<'info> {
     // TODO: check fees
+    // TODO: check normalization
     pub fn proccess_ix(&mut self) -> Result<()> {
         require!(
             self.outcome_mint.key() == self.pool.yes_outcome_mint
@@ -111,11 +112,9 @@ impl<'info> ClaimRewards<'info> {
         } else {
             (stake_seconds as u128)
                 .checked_mul(self.pool.total_incentive_amount as u128)
-                .ok_or(ReflexError::MathOverflow)?
-                .checked_div(s_w)
-                .ok_or(ReflexError::MathOverflow)?
-                .try_into()
-                .map_err(|_| ReflexError::MathOverflow)?
+                .and_then(|v| v.checked_div(s_w))
+                .and_then(|v| v.try_into().ok())
+                .ok_or(ProgramError::ArithmeticOverflow)?
         };
 
         require!(staked > 0 || payout > 0, ReflexError::ZeroRewards);

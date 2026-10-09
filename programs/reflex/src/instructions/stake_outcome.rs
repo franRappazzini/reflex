@@ -55,7 +55,6 @@ pub struct StakeOutcome<'info> {
 }
 
 impl<'info> StakeOutcome<'info> {
-    // TODO: calculate fees
     pub fn proccess_ix(&mut self, amount: u64, bumps: StakeOutcomeBumps) -> Result<()> {
         require!(
             self.outcome_mint.key() == self.pool.yes_outcome_mint
@@ -81,38 +80,46 @@ impl<'info> StakeOutcome<'info> {
             self.position.bump = bumps.position;
         }
 
+        let fees: u64 = (amount as u128)
+            .checked_mul(self.pool.fee_bps as u128)
+            .and_then(|v| v.checked_div(10_000))
+            .and_then(|v| v.try_into().ok())
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+
+        let amount_sub_fees = amount
+            .checked_sub(fees)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+
         let now = Clock::get()?.unix_timestamp;
 
         // update position and pool based on the outcome
-        let (pool_staked, position_staked) =
-            if self.outcome_mint.key() == self.pool.yes_outcome_mint {
-                self.pool.accrue_yes(now)?;
-                self.position.accrue_yes(now)?;
+        if self.outcome_mint.key() == self.pool.yes_outcome_mint {
+            // fist accrue
+            self.pool.accrue_yes(now)?;
+            self.position.accrue_yes(now)?;
 
-                (
-                    &mut self.pool.total_yes_staked,
-                    &mut self.position.yes_staked,
-                    // self.pool.available_yes_fees
-                )
-            } else if self.outcome_mint.key() == self.pool.no_outcome_mint {
-                self.pool.accrue_no(now)?;
-                self.position.accrue_no(now)?;
+            // then update amounts
+            self.pool.stake_yes(amount_sub_fees, fees)?;
+            self.position.yes_staked = self
+                .position
+                .yes_staked
+                .checked_add(amount_sub_fees)
+                .ok_or(ProgramError::ArithmeticOverflow)?;
+        } else if self.outcome_mint.key() == self.pool.no_outcome_mint {
+            // fist accrue
+            self.pool.accrue_no(now)?;
+            self.position.accrue_no(now)?;
 
-                (
-                    &mut self.pool.total_no_staked,
-                    &mut self.position.no_staked,
-                    // self.pool.available_no_fees
-                )
-            } else {
-                return Err(ReflexError::WrongMint.into());
-            };
-
-        *pool_staked = pool_staked
-            .checked_add(amount)
-            .ok_or(ReflexError::MathOverflow)?;
-        *position_staked = position_staked
-            .checked_add(amount)
-            .ok_or(ReflexError::MathOverflow)?;
+            // then update amounts
+            self.pool.stake_no(amount_sub_fees, fees)?;
+            self.position.no_staked = self
+                .position
+                .no_staked
+                .checked_add(amount_sub_fees)
+                .ok_or(ProgramError::ArithmeticOverflow)?;
+        } else {
+            return Err(ReflexError::WrongMint.into());
+        }
 
         Ok(())
     }

@@ -6,8 +6,6 @@ pub enum ReflexError {
     Unauthorized,
     #[msg("The selected mint is not correct")]
     WrongMint,
-    #[msg("Math Overflow")]
-    MathOverflow,
     #[msg("The market is not open")]
     MarketIsNotOpen,
     #[msg("The Pool can not be settled")]
