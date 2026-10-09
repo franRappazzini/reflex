@@ -2,6 +2,7 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub mod states;
+pub mod utils;
 
 use anchor_lang::prelude::*;
 
@@ -29,6 +30,10 @@ pub mod reflex {
 
     pub fn stake_outcome(ctx: Context<StakeOutcome>, amount: u64) -> Result<()> {
         ctx.accounts.proccess_ix(amount, ctx.bumps)
+    }
+
+    pub fn unstake_outcome(ctx: Context<UnstakeOutcome>, amount: u64) -> Result<()> {
+        ctx.accounts.proccess_ix(amount)
     }
 
     pub fn settle_pool(ctx: Context<SettlePool>, decision: PoolStatus) -> Result<()> {

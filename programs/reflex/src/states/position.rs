@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{error::ReflexError, DISCRIMINATOR_SIZE};
+use crate::{utils, DISCRIMINATOR_SIZE};
 
 #[account]
 #[derive(InitSpace)]
@@ -18,63 +18,21 @@ pub struct Position {
 impl Position {
     pub const SIZE: usize = DISCRIMINATOR_SIZE + Position::INIT_SPACE;
 
-    pub fn accrue_yes(&mut self, now: i64) -> Result<()> {
-        let dt = now
-            .checked_sub(self.yes_last_update_ts)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        require!(dt >= 0, ReflexError::Unauthorized);
-
-        let delta = (self.yes_staked as u128)
-            .checked_mul(dt as u128)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        self.yes_stake_seconds = self
-            .yes_stake_seconds
-            .checked_add(delta)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        self.yes_last_update_ts = now;
-
-        Ok(())
+    pub fn accrue_yes(&mut self, ts: i64) -> Result<()> {
+        utils::accrue(
+            self.yes_staked,
+            &mut self.yes_stake_seconds,
+            &mut self.yes_last_update_ts,
+            ts,
+        )
     }
 
-    pub fn accrue_no(&mut self, now: i64) -> Result<()> {
-        let dt = now
-            .checked_sub(self.no_last_update_ts)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        require!(dt >= 0, ReflexError::Unauthorized);
-
-        let delta = (self.no_staked as u128)
-            .checked_mul(dt as u128)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        self.no_stake_seconds = self
-            .no_stake_seconds
-            .checked_add(delta)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        self.no_last_update_ts = now;
-
-        Ok(())
-    }
-
-    pub fn add_yes_staked(&mut self, amount: u64) -> Result<()> {
-        self.yes_staked = self
-            .yes_staked
-            .checked_add(amount)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        Ok(())
-    }
-
-    pub fn add_no_staked(&mut self, amount: u64) -> Result<()> {
-        self.no_staked = self
-            .no_staked
-            .checked_add(amount)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        Ok(())
+    pub fn accrue_no(&mut self, ts: i64) -> Result<()> {
+        utils::accrue(
+            self.no_staked,
+            &mut self.no_stake_seconds,
+            &mut self.no_last_update_ts,
+            ts,
+        )
     }
 }

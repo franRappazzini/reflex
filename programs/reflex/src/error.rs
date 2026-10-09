@@ -16,4 +16,8 @@ pub enum ReflexError {
     PooltNotSettled,
     #[msg("The rewards must be greater than zero")]
     ZeroRewards,
+    #[msg("The amount must be greater than zero")]
+    ZeroAmount,
+    #[msg("The selected amount is not valid")]
+    InvalidAmount,
 }

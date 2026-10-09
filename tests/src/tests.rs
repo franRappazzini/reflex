@@ -4,6 +4,7 @@ mod create_pool;
 mod initialize;
 mod settle_pool;
 mod stake_outcome;
+mod unstake_outcome;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anchor_client::anchor_lang::prelude::clock::SECONDS_PER_DAY;
@@ -35,6 +36,15 @@ fn test_reflex_lifecycle() {
         .expect("additional YES stake before settlement failed");
 
     assert_pool_and_position(&ctx, &pool);
+
+    advance_time(7);
+
+    unstake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT / 2)
+        .expect("unstake outcome YES failed");
+
+    // check amount, seconds and timestamps in pool and position
+
+    advance_time(7);
 
     settle_pool::run(&ctx, reflex::PoolStatus::Yes);
     claim_rewards::run(&ctx, &pool.incentive, &pool.yes);

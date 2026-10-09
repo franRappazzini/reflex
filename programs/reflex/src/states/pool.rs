@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{error::ReflexError, DISCRIMINATOR_SIZE};
+use crate::{utils, DISCRIMINATOR_SIZE};
 
 #[account]
 #[derive(InitSpace)]
@@ -40,64 +40,30 @@ pub struct Pool {
 impl Pool {
     pub const SIZE: usize = DISCRIMINATOR_SIZE + Pool::INIT_SPACE;
 
-    pub fn accrue_yes(&mut self, now: i64) -> Result<()> {
-        let dt = now
-            .checked_sub(self.yes_last_update_ts)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        require!(dt >= 0, ReflexError::Unauthorized);
-
-        let delta = (self.total_yes_staked as u128)
-            .checked_mul(dt as u128)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        self.yes_stake_seconds = self
-            .yes_stake_seconds
-            .checked_add(delta)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        self.yes_last_update_ts = now;
-
-        Ok(())
+    pub fn accrue_yes(&mut self, ts: i64) -> Result<()> {
+        utils::accrue(
+            self.total_yes_staked,
+            &mut self.yes_stake_seconds,
+            &mut self.yes_last_update_ts,
+            ts,
+        )
     }
 
-    pub fn accrue_no(&mut self, now: i64) -> Result<()> {
-        let dt = now
-            .checked_sub(self.no_last_update_ts)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        require!(dt >= 0, ReflexError::Unauthorized);
-
-        let delta = (self.total_no_staked as u128)
-            .checked_mul(dt as u128)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        self.no_stake_seconds = self
-            .no_stake_seconds
-            .checked_add(delta)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        self.no_last_update_ts = now;
-
-        Ok(())
+    pub fn accrue_no(&mut self, ts: i64) -> Result<()> {
+        utils::accrue(
+            self.total_no_staked,
+            &mut self.no_stake_seconds,
+            &mut self.no_last_update_ts,
+            ts,
+        )
     }
 
-    pub fn add_yes_staked(&mut self, amount: u64) -> Result<()> {
-        self.total_yes_staked = self
-            .total_yes_staked
-            .checked_add(amount)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        Ok(())
-    }
-
-    pub fn add_no_staked(&mut self, amount: u64) -> Result<()> {
-        self.total_no_staked = self
-            .total_no_staked
-            .checked_add(amount)
-            .ok_or(ReflexError::MathOverflow)?;
-
-        Ok(())
+    pub fn effective_ts(&self, now: i64) -> i64 {
+        if self.is_yes() || self.is_no() {
+            self.resolution_timestamp
+        } else {
+            now
+        }
     }
 
     pub fn is_open(&self) -> bool {

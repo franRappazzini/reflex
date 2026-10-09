@@ -84,23 +84,35 @@ impl<'info> StakeOutcome<'info> {
         let now = Clock::get()?.unix_timestamp;
 
         // update position and pool based on the outcome
-        if self.outcome_mint.key() == self.pool.yes_outcome_mint {
-            self.pool.accrue_yes(now)?;
-            self.position.accrue_yes(now)?;
+        let (pool_staked, position_staked) =
+            if self.outcome_mint.key() == self.pool.yes_outcome_mint {
+                self.pool.accrue_yes(now)?;
+                self.position.accrue_yes(now)?;
 
-            // self.pool.available_yes_fees
-            self.pool.add_yes_staked(amount)?;
-            self.position.add_yes_staked(amount)?;
-        } else if self.outcome_mint.key() == self.pool.no_outcome_mint {
-            self.pool.accrue_no(now)?;
-            self.position.accrue_no(now)?;
+                (
+                    &mut self.pool.total_yes_staked,
+                    &mut self.position.yes_staked,
+                    // self.pool.available_yes_fees
+                )
+            } else if self.outcome_mint.key() == self.pool.no_outcome_mint {
+                self.pool.accrue_no(now)?;
+                self.position.accrue_no(now)?;
 
-            // self.pool.available_no_fees
-            self.pool.add_no_staked(amount)?;
-            self.position.add_no_staked(amount)?;
-        } else {
-            return Err(ReflexError::WrongMint.into());
-        }
+                (
+                    &mut self.pool.total_no_staked,
+                    &mut self.position.no_staked,
+                    // self.pool.available_no_fees
+                )
+            } else {
+                return Err(ReflexError::WrongMint.into());
+            };
+
+        *pool_staked = pool_staked
+            .checked_add(amount)
+            .ok_or(ReflexError::MathOverflow)?;
+        *position_staked = position_staked
+            .checked_add(amount)
+            .ok_or(ReflexError::MathOverflow)?;
 
         Ok(())
     }
