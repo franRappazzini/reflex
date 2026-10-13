@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::ReflexError, Pool, Position};
+use crate::{constants::*, error::ReflexError, utils, Pool, Position};
 
 #[derive(Accounts)]
 pub struct StakeOutcome<'info> {
@@ -17,7 +17,7 @@ pub struct StakeOutcome<'info> {
     pub pool: Account<'info, Pool>,
 
     /// CHECK: by owner and data len
-    #[account(owner = *predict_program.key, constraint = market.data_len() == 320)]
+    #[account(owner = *predict_program.key, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
     #[account(
@@ -47,8 +47,8 @@ pub struct StakeOutcome<'info> {
     )]
     pub staker_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by id
-    // #[account(address = Pubkey::from_str(""))]
+    /// CHECK: by program id
+    #[account(address = WORLD_PROGRAM_ID)]
     pub predict_program: UncheckedAccount<'info>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -80,15 +80,7 @@ impl<'info> StakeOutcome<'info> {
             self.position.bump = bumps.position;
         }
 
-        let fees: u64 = (amount as u128)
-            .checked_mul(self.pool.fee_bps as u128)
-            .and_then(|v| v.checked_div(10_000))
-            .and_then(|v| v.try_into().ok())
-            .ok_or(ProgramError::ArithmeticOverflow)?;
-
-        let amount_sub_fees = amount
-            .checked_sub(fees)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+        let (amount_sub_fees, fees) = utils::apply_fee(amount, self.pool.fee_bps)?;
 
         let now = Clock::get()?.unix_timestamp;
 

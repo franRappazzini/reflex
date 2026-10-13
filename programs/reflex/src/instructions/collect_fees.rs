@@ -43,8 +43,8 @@ pub struct CollectFees<'info> {
     )]
     pub creator_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by id
-    // #[account(address = Pubkey::from_str(""))]
+    /// CHECK: by program id
+    #[account(address = WORLD_PROGRAM_ID)]
     pub predict_program: UncheckedAccount<'info>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,

@@ -17,7 +17,7 @@ pub struct UnstakeOutcome<'info> {
     pub pool: Account<'info, Pool>,
 
     /// CHECK: by owner and data len
-    #[account(owner = *predict_program.key, constraint = market.data_len() == 320)]
+    #[account(owner = *predict_program.key, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
     #[account(
@@ -45,8 +45,8 @@ pub struct UnstakeOutcome<'info> {
     )]
     pub staker_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by id
-    // #[account(address = Pubkey::from_str(""))]
+    /// CHECK: by program id
+    #[account(address = WORLD_PROGRAM_ID)]
     pub predict_program: UncheckedAccount<'info>,
     pub token_program: Interface<'info, TokenInterface>,
 }

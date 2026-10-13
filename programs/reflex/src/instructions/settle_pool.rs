@@ -22,7 +22,7 @@ pub struct SettlePool<'info> {
     pub pool: Account<'info, Pool>,
 
     /// CHECK: by owner and data len
-    // #[cfg(not(feature = "skip-checks"))] // in test wed ignore if the real market exists
+    // #[cfg(not(feature = "local-test"))] // in test wed ignore if the real market exists
     // #[account(/* owner = *predict_program.key, */ constraint = market.data_len() == 0)]
     // TODO:
     pub market: UncheckedAccount<'info>,

@@ -24,10 +24,9 @@ pub struct CreatePool<'info> {
     pub pool: Account<'info, Pool>,
 
     /// CHECK: by owner and data len
-    #[account(owner = *predict_program.key, constraint = market.data_len() == 320)]
+    #[account(owner = *predict_program.key, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
-    // TODO: whitelisted tokens: usdc or wsol
     pub mint: InterfaceAccount<'info, Mint>,
 
     pub yes_outcome_mint: InterfaceAccount<'info, Mint>,
@@ -70,8 +69,8 @@ pub struct CreatePool<'info> {
     )]
     pub signer_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by id
-    // #[account(address = Pubkey::from_str(""))]
+    /// CHECK: by program id
+    #[account(address = WORLD_PROGRAM_ID)]
     pub predict_program: UncheckedAccount<'info>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -79,17 +78,23 @@ pub struct CreatePool<'info> {
 
 impl<'info> CreatePool<'info> {
     pub fn proccess_ix(&mut self, amount: u64, bumps: CreatePoolBumps) -> Result<()> {
+        require!(
+            MINT_WHITELIST.contains(&self.mint.key()),
+            ReflexError::InvalidAmount
+        );
+
+        // get world market data
         let market_ptr = self.market.try_borrow_data().unwrap().as_ptr();
 
         // TEST: to avoid real mint checks
-        let yes_outcome_mint = if !cfg!(feature = "skip-checks") {
-            unsafe { *(market_ptr.add(72) as *const Pubkey) }
+        let yes_outcome_mint = if !cfg!(feature = "local-test") {
+            unsafe { *(market_ptr.add(WORLD_YES_MINT_OFFSET) as *const Pubkey) }
         } else {
             self.yes_outcome_mint.key()
         };
         // TEST: to avoid real mint checks
-        let no_outcome_mint = if !cfg!(feature = "skip-checks") {
-            unsafe { *(market_ptr.add(104) as *const Pubkey) }
+        let no_outcome_mint = if !cfg!(feature = "local-test") {
+            unsafe { *(market_ptr.add(WORLD_NO_MINT_OFFSET) as *const Pubkey) }
         } else {
             self.no_outcome_mint.key()
         };

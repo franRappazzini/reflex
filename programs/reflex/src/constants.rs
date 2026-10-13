@@ -1,7 +1,21 @@
-use anchor_lang::constant;
+use anchor_lang::{
+    constant,
+    prelude::{pubkey::pubkey, Pubkey},
+};
+
+pub const WORLD_PROGRAM_ID: Pubkey = pubkey!("prediCtPZCttYMvm2W3PtxmMxLmT1dtN7riU6Cxh6tM"); // mainnet
+pub const USDC_MINT_ID: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"); // mainnet
+pub const WSOL_MINT_ID: Pubkey = pubkey!("So11111111111111111111111111111111111111112"); // mainnet
+
+pub const MINT_WHITELIST: [Pubkey; 2] = [USDC_MINT_ID, WSOL_MINT_ID];
 
 pub const DISCRIMINATOR_SIZE: usize = 8;
+pub const WORLD_MARKET_SIZE: usize = 320;
+pub const WORLD_YES_MINT_OFFSET: usize = 72;
+pub const WORLD_NO_MINT_OFFSET: usize = 104;
+pub const BPS_DENOMINATOR: u16 = 10_000;
 
+// seeds
 #[constant]
 pub const CONFIG_SEED: &[u8] = b"config";
 

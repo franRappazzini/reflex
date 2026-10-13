@@ -4,7 +4,7 @@ use anchor_spl::{
     token_interface::{self, Mint, TokenAccount, TokenInterface},
 };
 
-use crate::{constants::*, error::ReflexError, Pool, Position};
+use crate::{constants::*, error::ReflexError, utils, Pool, Position};
 
 #[derive(Accounts)]
 pub struct ClaimRewards<'info> {
@@ -68,8 +68,8 @@ pub struct ClaimRewards<'info> {
     )]
     pub staker_outcome_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by id
-    // #[account(address = Pubkey::from_str(""))]
+    /// CHECK: by program id
+    #[account(address = WORLD_PROGRAM_ID)]
     pub predict_program: UncheckedAccount<'info>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -77,8 +77,6 @@ pub struct ClaimRewards<'info> {
 }
 
 impl<'info> ClaimRewards<'info> {
-    // TODO: check fees
-    // TODO: check normalization
     pub fn proccess_ix(&mut self) -> Result<()> {
         require!(
             self.outcome_mint.key() == self.pool.yes_outcome_mint
@@ -110,11 +108,7 @@ impl<'info> ClaimRewards<'info> {
         let payout: u64 = if s_w == 0 {
             0
         } else {
-            (stake_seconds as u128)
-                .checked_mul(self.pool.total_incentive_amount as u128)
-                .and_then(|v| v.checked_div(s_w))
-                .and_then(|v| v.try_into().ok())
-                .ok_or(ProgramError::ArithmeticOverflow)?
+            utils::normalized_share(self.pool.total_incentive_amount, stake_seconds, s_w)?
         };
 
         require!(staked > 0 || payout > 0, ReflexError::ZeroRewards);

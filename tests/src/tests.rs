@@ -10,6 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use anchor_client::anchor_lang::prelude::clock::SECONDS_PER_DAY;
 use anchor_client::anchor_lang::prelude::program_pack::Pack;
+use reflex::BPS_DENOMINATOR;
 use reqwest::blocking::Client;
 use serde_json::json;
 use solana_signer::Signer;
@@ -137,7 +138,7 @@ fn assert_after_unstake(ctx: &TestContext, setup: &PoolSetup) {
 }
 
 fn fee_amount(amount: u64, fee_bps: u16) -> u64 {
-    u64::try_from(u128::from(amount) * u128::from(fee_bps) / 10_000)
+    u64::try_from(u128::from(amount) * u128::from(fee_bps) / BPS_DENOMINATOR as u128)
         .expect("fee amount does not fit in u64")
 }
 
