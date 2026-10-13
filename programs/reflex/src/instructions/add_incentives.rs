@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, Pool};
+use crate::{constants::*, error::ReflexError, Pool};
 
 #[derive(Accounts)]
 pub struct AddIncentives<'info> {
@@ -17,7 +17,7 @@ pub struct AddIncentives<'info> {
     pub pool: Account<'info, Pool>,
 
     /// CHECK: by owner and data len
-    #[account(owner = *predict_program.key, constraint = market.data_len() == WORLD_MARKET_SIZE)]
+    #[account(owner = WORLD_PROGRAM_ID, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
     #[account(address = pool.incentive_mint)]
@@ -39,14 +39,13 @@ pub struct AddIncentives<'info> {
     )]
     pub signer_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by program id
-    #[account(address = WORLD_PROGRAM_ID)]
-    pub predict_program: UncheckedAccount<'info>,
     pub token_program: Interface<'info, TokenInterface>,
 }
 
 impl<'info> AddIncentives<'info> {
     pub fn proccess_ix(&mut self, amount: u64) -> Result<()> {
+        require!(amount > 0, ReflexError::InvalidAmount);
+
         // transfer incentives to vault
         let cpi_accounts = token_interface::TransferChecked {
             from: self.signer_ata.to_account_info(),

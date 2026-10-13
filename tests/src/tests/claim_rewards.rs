@@ -4,9 +4,7 @@ use anchor_client::CommitmentConfig;
 use solana_signer::Signer;
 use spl_associated_token_account_interface::address::get_associated_token_address;
 
-use crate::utils::{
-    fetch_account, IncentiveSetup, OutcomeSetup, TestContext, HARDCODED_MARKET, PREDICT_PROGRAM_ID,
-};
+use crate::utils::{fetch_account, IncentiveSetup, OutcomeSetup, TestContext};
 
 pub(super) fn run(ctx: &TestContext, incentive: &IncentiveSetup, yes: &OutcomeSetup) {
     let staker = ctx.accounts.staker.pubkey();
@@ -39,7 +37,7 @@ pub(super) fn run(ctx: &TestContext, incentive: &IncentiveSetup, yes: &OutcomeSe
         .accounts(reflex::accounts::ClaimRewards {
             staker,
             pool: ctx.pdas.pool,
-            market: HARDCODED_MARKET,
+            market: ctx.world_random_market,
             position: ctx.pdas.position,
             mint: incentive.mint,
             outcome_mint: yes.mint,
@@ -47,7 +45,6 @@ pub(super) fn run(ctx: &TestContext, incentive: &IncentiveSetup, yes: &OutcomeSe
             pool_outcome_vault: yes.vault,
             staker_ata: staker_incentive_ata,
             staker_outcome_ata: yes.ata,
-            predict_program: PREDICT_PROGRAM_ID,
             token_program: spl_token_interface::ID,
             associated_token_program: spl_associated_token_account_interface::program::ID,
             system_program: solana_sdk_ids::system_program::id(),

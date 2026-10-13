@@ -24,7 +24,7 @@ pub struct CreatePool<'info> {
     pub pool: Account<'info, Pool>,
 
     /// CHECK: by owner and data len
-    #[account(owner = *predict_program.key, constraint = market.data_len() == WORLD_MARKET_SIZE)]
+    #[account(owner = WORLD_PROGRAM_ID, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
     pub mint: InterfaceAccount<'info, Mint>,
@@ -69,19 +69,19 @@ pub struct CreatePool<'info> {
     )]
     pub signer_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by program id
-    #[account(address = WORLD_PROGRAM_ID)]
-    pub predict_program: UncheckedAccount<'info>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> CreatePool<'info> {
     pub fn proccess_ix(&mut self, amount: u64, bumps: CreatePoolBumps) -> Result<()> {
-        require!(
-            MINT_WHITELIST.contains(&self.mint.key()),
-            ReflexError::InvalidAmount
-        );
+        require!(amount > 0, ReflexError::InvalidAmount);
+        if !cfg!(feature = "local-test") {
+            require!(
+                MINT_WHITELIST.contains(&self.mint.key()),
+                ReflexError::WrongMint
+            );
+        }
 
         // get world market data
         let market_ptr = self.market.try_borrow_data().unwrap().as_ptr();

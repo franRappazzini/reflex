@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use solana_signer::Signer;
 
-use crate::utils::{TestContext, HARDCODED_MARKET};
+use crate::utils::TestContext;
 
 pub(super) fn run(ctx: &TestContext, decision: reflex::PoolStatus) {
     let signature = ctx
@@ -12,7 +12,7 @@ pub(super) fn run(ctx: &TestContext, decision: reflex::PoolStatus) {
             authority: ctx.accounts.authority.pubkey(),
             config: ctx.pdas.config,
             pool: ctx.pdas.pool,
-            market: HARDCODED_MARKET,
+            market: ctx.world_random_market,
         })
         .args(reflex::instruction::SettlePool { decision })
         .payer(Rc::from(ctx.accounts.authority.insecure_clone()))

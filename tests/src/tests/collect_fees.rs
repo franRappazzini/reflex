@@ -5,9 +5,7 @@ use anchor_client::CommitmentConfig;
 use solana_signer::Signer;
 use spl_associated_token_account_interface::address::get_associated_token_address;
 
-use crate::utils::{
-    fetch_account, OutcomeSetup, TestContext, HARDCODED_MARKET, PREDICT_PROGRAM_ID,
-};
+use crate::utils::{fetch_account, OutcomeSetup, TestContext};
 
 pub(super) fn run(ctx: &TestContext, outcome: &OutcomeSetup) {
     let pool_before: reflex::Pool = fetch_account(ctx, &ctx.pdas.pool);
@@ -36,11 +34,10 @@ pub(super) fn run(ctx: &TestContext, outcome: &OutcomeSetup) {
         .accounts(reflex::accounts::CollectFees {
             creator,
             pool: ctx.pdas.pool,
-            market: HARDCODED_MARKET,
+            market: ctx.world_random_market,
             outcome_mint: outcome.mint,
             pool_outcome_vault: outcome.vault,
             creator_ata,
-            predict_program: PREDICT_PROGRAM_ID,
             associated_token_program: spl_associated_token_account_interface::program::ID,
             token_program: spl_token_interface::ID,
             system_program: solana_sdk_ids::system_program::id(),

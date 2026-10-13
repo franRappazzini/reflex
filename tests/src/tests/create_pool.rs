@@ -5,8 +5,8 @@ use solana_signer::Signer;
 
 use crate::utils::{
     derive_outcome_vault, prepare_mint_and_ata, IncentiveSetup, OutcomeSetup, PoolSetup,
-    TestContext, HARDCODED_MARKET, INITIAL_MINT_AMOUNT, INITIAL_OUTCOME_AMOUNT,
-    INITIAL_POOL_FUNDING_AMOUNT, PREDICT_PROGRAM_ID, USDC_DECIMALS,
+    TestContext, INITIAL_MINT_AMOUNT, INITIAL_OUTCOME_AMOUNT, INITIAL_POOL_FUNDING_AMOUNT,
+    USDC_DECIMALS,
 };
 
 pub(super) fn run(ctx: &TestContext) -> PoolSetup {
@@ -73,7 +73,7 @@ pub(super) fn run(ctx: &TestContext) -> PoolSetup {
             signer: ctx.accounts.creator.pubkey(),
             config: ctx.pdas.config,
             pool: ctx.pdas.pool,
-            market: HARDCODED_MARKET,
+            market: ctx.world_random_market,
             mint: incentive_mint_address,
             yes_outcome_mint: yes_setup.mint,
             no_outcome_mint: no_setup.mint,
@@ -81,7 +81,6 @@ pub(super) fn run(ctx: &TestContext) -> PoolSetup {
             pool_vault: ctx.pdas.pool_vault,
             pool_yes_vault: yes_setup.vault,
             pool_no_vault: no_setup.vault,
-            predict_program: PREDICT_PROGRAM_ID,
             token_program: spl_token_interface::ID,
             system_program: solana_sdk_ids::system_program::id(),
         })

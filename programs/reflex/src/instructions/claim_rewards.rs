@@ -18,9 +18,8 @@ pub struct ClaimRewards<'info> {
     )]
     pub pool: Account<'info, Pool>,
 
-    /// CHECK: by owner and data len
-    // #[account(/* owner = *predict_program.key, */ constraint = market.data_len() == 0)]
-    // TODO:
+    /// CHECK: no validation because it could be closed
+    // #[account(/* owner = *WORLD_PROGRAM_ID, */ constraint = market.data_len() == 0)]
     pub market: UncheckedAccount<'info>,
 
     #[account(
@@ -68,9 +67,6 @@ pub struct ClaimRewards<'info> {
     )]
     pub staker_outcome_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by program id
-    #[account(address = WORLD_PROGRAM_ID)]
-    pub predict_program: UncheckedAccount<'info>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,

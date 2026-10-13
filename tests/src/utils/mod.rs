@@ -5,6 +5,7 @@ use anchor_client::{
     Client, Cluster, CommitmentConfig, Instruction, Program,
 };
 
+use reflex::{WORLD_MARKET_SIZE, WORLD_PROGRAM_ID};
 use solana_keypair::{read_keypair_file, Keypair};
 use solana_pubkey::{pubkey, Pubkey};
 use solana_signer::Signer;
@@ -17,8 +18,6 @@ use spl_token_interface::instruction::{initialize_mint2, mint_to};
 // constants
 // -----------------------------------------------------------------------------
 pub const PROGRAM_ID: Pubkey = pubkey!("8i3X3C7WaRGxKLTpoecUqmPEueMULXVTRzEJFuyGrTHd");
-pub const PREDICT_PROGRAM_ID: Pubkey = pubkey!("prediCtPZCttYMvm2W3PtxmMxLmT1dtN7riU6Cxh6tM");
-pub const HARDCODED_MARKET: Pubkey = pubkey!("JDMM4SJ6d2XDLghmuLMH7wdPBKmQi5CT5Z24XcnNTMyN");
 
 pub const ONE_SOL: u64 = 1_000_000_000;
 pub const USDC_DECIMALS: u8 = 6;
@@ -49,6 +48,7 @@ pub struct TestContext {
     pub program: Program<Rc<Keypair>>,
     pub accounts: TestAccounts,
     pub pdas: TestPdas,
+    pub world_random_market: Pubkey,
 }
 
 pub struct MintSetup {
@@ -160,7 +160,6 @@ pub fn derive_pdas(program_id: &Pubkey, market: &Pubkey, staker_address: &Pubkey
 // -----------------------------------------------------------------------------
 pub fn setup() -> TestContext {
     let accounts = load_accounts();
-    let pdas = derive_pdas(&PROGRAM_ID, &HARDCODED_MARKET, &accounts.staker.pubkey());
 
     let authority_rc = Rc::new(accounts.authority.insecure_clone());
     let client = Client::new_with_options(
@@ -182,11 +181,30 @@ pub fn setup() -> TestContext {
         .request_airdrop(&accounts.staker.pubkey(), ONE_SOL)
         .expect("Falló el airdrop a staker");
 
+    let world_accounts = program
+        .rpc()
+        .get_program_accounts(&WORLD_PROGRAM_ID)
+        .expect("Fail to get World program accounts");
+    let (last_world_market_address, _) = world_accounts
+        .iter()
+        .filter(|(_, a)| a.data.len() == WORLD_MARKET_SIZE)
+        .last()
+        .expect("Fail to get one account");
+
+    let pdas = derive_pdas(
+        &PROGRAM_ID,
+        last_world_market_address,
+        &accounts.staker.pubkey(),
+    );
+
+    println!("world market address: {last_world_market_address}");
+
     TestContext {
         client,
         program,
         accounts,
         pdas,
+        world_random_market: *last_world_market_address,
     }
 }
 

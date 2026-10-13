@@ -17,7 +17,7 @@ pub struct StakeOutcome<'info> {
     pub pool: Account<'info, Pool>,
 
     /// CHECK: by owner and data len
-    #[account(owner = *predict_program.key, constraint = market.data_len() == WORLD_MARKET_SIZE)]
+    #[account(owner = WORLD_PROGRAM_ID, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
     #[account(
@@ -47,15 +47,14 @@ pub struct StakeOutcome<'info> {
     )]
     pub staker_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by program id
-    #[account(address = WORLD_PROGRAM_ID)]
-    pub predict_program: UncheckedAccount<'info>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> StakeOutcome<'info> {
     pub fn proccess_ix(&mut self, amount: u64, bumps: StakeOutcomeBumps) -> Result<()> {
+        require!(amount > 0, ReflexError::InvalidAmount);
+
         require!(
             self.outcome_mint.key() == self.pool.yes_outcome_mint
                 || self.outcome_mint.key() == self.pool.no_outcome_mint,

@@ -21,14 +21,13 @@ pub struct SettlePool<'info> {
     )]
     pub pool: Account<'info, Pool>,
 
-    /// CHECK: by owner and data len
-    // #[cfg(not(feature = "local-test"))] // in test wed ignore if the real market exists
+    /// CHECK: no validation because it could be closed
     // #[account(/* owner = *predict_program.key, */ constraint = market.data_len() == 0)]
-    // TODO:
     pub market: UncheckedAccount<'info>,
 }
 
 impl<'info> SettlePool<'info> {
+    // manual settlement until complete world integration
     pub fn proccess_ix(&mut self, decision: PoolStatus) -> Result<()> {
         let now = Clock::get()?.unix_timestamp;
 

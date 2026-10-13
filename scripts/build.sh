@@ -1,0 +1,1 @@
+anchor build -- --features local-test

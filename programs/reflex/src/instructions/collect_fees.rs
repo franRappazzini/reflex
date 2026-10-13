@@ -19,9 +19,8 @@ pub struct CollectFees<'info> {
     )]
     pub pool: Account<'info, Pool>,
 
-    /// CHECK: by owner and data len
+    /// CHECK: no validation because it could be closed
     // #[account(/* owner = *predict_program.key, */ constraint = market.data_len() == 0)]
-    // TODO:
     pub market: UncheckedAccount<'info>,
 
     pub outcome_mint: InterfaceAccount<'info, Mint>,
@@ -43,16 +42,12 @@ pub struct CollectFees<'info> {
     )]
     pub creator_ata: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: by program id
-    #[account(address = WORLD_PROGRAM_ID)]
-    pub predict_program: UncheckedAccount<'info>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> CollectFees<'info> {
-    // TODO: check normalization
     pub fn proccess_ix(&mut self) -> Result<()> {
         let collected_fees =
             if self.pool.is_yes() && self.outcome_mint.key() == self.pool.yes_outcome_mint {
