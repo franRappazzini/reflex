@@ -10,8 +10,9 @@ pub struct Pool {
     pub yes_outcome_mint: Pubkey,
     pub no_outcome_mint: Pubkey,
 
-    pub yes_stake_seconds: u128, // global accumulator
-    pub no_stake_seconds: u128,  // global accumulator
+    pub yes_stake_seconds: u128,     // global accumulator
+    pub no_stake_seconds: u128,      // global accumulator
+    pub funder_weight_seconds: u128, // global accumulator
 
     pub total_incentive_amount: u64,
     pub total_yes_staked: u64,
@@ -24,17 +25,12 @@ pub struct Pool {
     pub resolution_timestamp: i64,
     pub yes_last_update_ts: i64,
     pub no_last_update_ts: i64,
+    pub funder_last_update_ts: i64,
 
     pub fee_bps: u16,
     pub status: PoolStatus,
     pub vault_bump: u8,
     pub bump: u8,
-    // pub mint: Pubkey,
-    // pub receipt_mint: Pubkey,
-    // pub total_deposited: u64,
-    // pub total_claimed: u64,
-    // pub collected_fees: u64,
-    // pub fees_claimed: bool,
 }
 
 impl Pool {
@@ -54,6 +50,15 @@ impl Pool {
             self.total_no_staked,
             &mut self.no_stake_seconds,
             &mut self.no_last_update_ts,
+            ts,
+        )
+    }
+
+    pub fn accrue_funders(&mut self, ts: i64) -> Result<()> {
+        utils::accrue(
+            self.total_incentive_amount,
+            &mut self.funder_weight_seconds,
+            &mut self.funder_last_update_ts,
             ts,
         )
     }

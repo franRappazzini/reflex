@@ -18,4 +18,6 @@ pub enum ReflexError {
     ZeroAmount,
     #[msg("The selected amount is not valid")]
     InvalidAmount,
+    #[msg("Invalid timestamp")]
+    InvalidTimestamp,
 }

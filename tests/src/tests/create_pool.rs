@@ -73,6 +73,7 @@ pub(super) fn run(ctx: &TestContext) -> PoolSetup {
             signer: ctx.accounts.creator.pubkey(),
             config: ctx.pdas.config,
             pool: ctx.pdas.pool,
+            funder: ctx.pdas.funder,
             market: ctx.world_random_market,
             mint: incentive_mint_address,
             yes_outcome_mint: yes_setup.mint,

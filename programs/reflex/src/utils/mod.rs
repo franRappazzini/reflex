@@ -55,7 +55,7 @@ pub fn accrue(staked: u64, acc: &mut u128, last_ts: &mut i64, ts: i64) -> Result
         .checked_sub(*last_ts)
         .ok_or(ProgramError::ArithmeticOverflow)?;
 
-    require!(dt >= 0, ReflexError::Unauthorized);
+    require!(dt >= 0, ReflexError::InvalidTimestamp);
 
     let delta = u128::from(staked)
         .checked_mul(dt as u128)

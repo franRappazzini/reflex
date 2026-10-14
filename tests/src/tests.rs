@@ -16,7 +16,7 @@ use serde_json::json;
 use solana_signer::Signer;
 
 use crate::utils::{
-    fetch_account, setup, PoolSetup, TestContext, ADDITIONAL_INCENTIVE_AMOUNT,
+    derive_funder_pda, fetch_account, setup, PoolSetup, TestContext, ADDITIONAL_INCENTIVE_AMOUNT,
     INITIAL_OUTCOME_AMOUNT, INITIAL_POOL_FUNDING_AMOUNT, INITIAL_STAKE_AMOUNT,
 };
 
@@ -28,12 +28,24 @@ fn test_reflex_lifecycle() {
     assert_initialized(&ctx);
 
     let pool = create_pool::run(&ctx);
+    assert_funder(&ctx, &ctx.accounts.creator, INITIAL_POOL_FUNDING_AMOUNT);
     stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT).expect("initial YES stake failed");
     stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT).expect("initial NO stake failed");
 
     advance_time(7);
 
-    add_incentives::run(&ctx, &pool.incentive, ADDITIONAL_INCENTIVE_AMOUNT);
+    add_incentives::run(
+        &ctx,
+        &ctx.accounts.staker,
+        &pool.incentive,
+        ADDITIONAL_INCENTIVE_AMOUNT,
+    );
+    assert_funder(&ctx, &ctx.accounts.staker, ADDITIONAL_INCENTIVE_AMOUNT);
+    assert_funder_weights(&ctx);
+    assert_eq!(
+        fetch_account::<reflex::Pool>(&ctx, &ctx.pdas.pool).total_incentive_amount,
+        INITIAL_POOL_FUNDING_AMOUNT + ADDITIONAL_INCENTIVE_AMOUNT
+    );
 
     stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT / 2)
         .expect("additional YES stake before settlement failed");
@@ -50,14 +62,59 @@ fn test_reflex_lifecycle() {
     advance_time(7);
     settle_pool::run(&ctx, reflex::PoolStatus::Yes);
 
+    collect_fees::run(&ctx, &ctx.accounts.creator, &pool.yes);
+    collect_fees::run(&ctx, &ctx.accounts.staker, &pool.yes);
     claim_rewards::run(&ctx, &pool.incentive, &pool.yes);
-
-    collect_fees::run(&ctx, &pool.yes);
 
     assert!(
         stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT / 2).is_err(),
         "staking should fail after the pool is settled"
     );
+}
+
+fn assert_funder(ctx: &TestContext, funder: &solana_keypair::Keypair, expected_amount: u64) {
+    let funder_address = funder.pubkey();
+    let funder_pda = derive_funder_pda(&ctx.program.id(), &ctx.pdas.pool, &funder_address);
+    let state: reflex::Funder = fetch_account(ctx, &funder_pda);
+
+    assert_eq!(state.funder, funder_address);
+    assert_eq!(state.amount, expected_amount);
+}
+
+fn assert_funder_weights(ctx: &TestContext) {
+    let pool: reflex::Pool = fetch_account(ctx, &ctx.pdas.pool);
+    let creator_funder: reflex::Funder = fetch_account(ctx, &ctx.pdas.funder);
+    let staker_funder_pda = derive_funder_pda(
+        &ctx.program.id(),
+        &ctx.pdas.pool,
+        &ctx.accounts.staker.pubkey(),
+    );
+    let staker_funder: reflex::Funder = fetch_account(ctx, &staker_funder_pda);
+
+    assert_eq!(
+        pool.funder_weight_seconds,
+        funder_weight_at(&creator_funder, pool.funder_last_update_ts)
+            + funder_weight_at(&staker_funder, pool.funder_last_update_ts)
+    );
+    assert_eq!(
+        pool.total_incentive_amount,
+        creator_funder.amount + staker_funder.amount
+    );
+}
+
+fn funder_weight_at(funder: &reflex::Funder, timestamp: i64) -> u128 {
+    let elapsed = timestamp
+        .checked_sub(funder.last_update_ts)
+        .and_then(|elapsed| u128::try_from(elapsed).ok())
+        .expect("pool funder timestamp precedes a funder's last update");
+    funder
+        .weight_seconds
+        .checked_add(
+            u128::from(funder.amount)
+                .checked_mul(elapsed)
+                .expect("funder weight overflow"),
+        )
+        .expect("funder weight overflow")
 }
 
 fn assert_initialized(ctx: &TestContext) {
@@ -178,17 +235,20 @@ fn advance_time(days: i64) {
         "params": [params]
     });
 
-    let res = client
+    let response = client
         .post(rpc_url)
         .header("Content-Type", "application/json")
         .json(&payload)
         .send();
-
-    if res.is_ok() {
-        println!("Advance {} days", days)
-    } else {
-        println!("❌ Fail advancing days")
-    }
-
-    // let res = res.unwrap().json::<Value>().unwrap();
+    let response: serde_json::Value = response
+        .expect("failed to send Surfpool time-travel request")
+        .error_for_status()
+        .expect("Surfpool time-travel request returned an HTTP error")
+        .json()
+        .expect("failed to decode Surfpool time-travel response");
+    assert!(
+        response.get("error").is_none(),
+        "Surfpool time-travel failed: {response}"
+    );
+    println!("Advanced time by {days} days");
 }

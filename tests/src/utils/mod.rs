@@ -41,6 +41,7 @@ pub struct TestPdas {
     pub pool: Pubkey,
     pub pool_vault: Pubkey,
     pub position: Pubkey,
+    pub funder: Pubkey,
 }
 
 pub struct TestContext {
@@ -99,6 +100,18 @@ pub fn derive_outcome_vault(program_id: &Pubkey, pool: &Pubkey, mint: &Pubkey) -
     .0
 }
 
+pub fn derive_funder_pda(program_id: &Pubkey, pool: &Pubkey, funder: &Pubkey) -> Pubkey {
+    Pubkey::find_program_address(
+        &[
+            reflex::constants::FUNDER_SEED,
+            pool.as_ref(),
+            funder.as_ref(),
+        ],
+        program_id,
+    )
+    .0
+}
+
 // -----------------------------------------------------------------------------
 // utils fns
 // -----------------------------------------------------------------------------
@@ -132,7 +145,12 @@ pub fn load_accounts() -> TestAccounts {
     }
 }
 
-pub fn derive_pdas(program_id: &Pubkey, market: &Pubkey, staker_address: &Pubkey) -> TestPdas {
+pub fn derive_pdas(
+    program_id: &Pubkey,
+    market: &Pubkey,
+    staker_address: &Pubkey,
+    funder_address: &Pubkey,
+) -> TestPdas {
     let (config, _) = Pubkey::find_program_address(&[reflex::constants::CONFIG_SEED], program_id);
     let (pool, _) =
         Pubkey::find_program_address(&[reflex::constants::POOL_SEED, market.as_ref()], program_id);
@@ -146,12 +164,21 @@ pub fn derive_pdas(program_id: &Pubkey, market: &Pubkey, staker_address: &Pubkey
         ],
         program_id,
     );
+    let (funder, _) = Pubkey::find_program_address(
+        &[
+            reflex::constants::FUNDER_SEED,
+            pool.as_ref(),
+            funder_address.as_ref(),
+        ],
+        program_id,
+    );
 
     TestPdas {
         config,
         pool,
         pool_vault,
         position,
+        funder,
     }
 }
 
@@ -195,6 +222,7 @@ pub fn setup() -> TestContext {
         &PROGRAM_ID,
         last_world_market_address,
         &accounts.staker.pubkey(),
+        &accounts.creator.pubkey(),
     );
 
     println!("world market address: {last_world_market_address}");

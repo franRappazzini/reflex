@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::ReflexError, Config, Pool};
+use crate::{constants::*, error::ReflexError, Config, Funder, Pool};
 
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
@@ -22,6 +22,15 @@ pub struct CreatePool<'info> {
         bump
     )]
     pub pool: Account<'info, Pool>,
+
+    #[account(
+        init,
+        payer = signer,
+        space = Funder::SIZE,
+        seeds = [FUNDER_SEED, pool.key().as_ref(), signer.key().as_ref()],
+        bump
+    )]
+    pub funder: Account<'info, Funder>,
 
     /// CHECK: by owner and data len
     #[account(owner = WORLD_PROGRAM_ID, constraint = market.data_len() == WORLD_MARKET_SIZE)]
@@ -87,16 +96,14 @@ impl<'info> CreatePool<'info> {
         let market_ptr = self.market.try_borrow_data().unwrap().as_ptr();
 
         // TEST: to avoid real mint checks
-        let yes_outcome_mint = if !cfg!(feature = "local-test") {
-            unsafe { *(market_ptr.add(WORLD_YES_MINT_OFFSET) as *const Pubkey) }
+        let (yes_outcome_mint, no_outcome_mint) = if !cfg!(feature = "local-test") {
+            // SAFE: because market is validated by owner and data len
+            (
+                unsafe { *(market_ptr.add(WORLD_YES_MINT_OFFSET) as *const Pubkey) },
+                unsafe { *(market_ptr.add(WORLD_NO_MINT_OFFSET) as *const Pubkey) },
+            )
         } else {
-            self.yes_outcome_mint.key()
-        };
-        // TEST: to avoid real mint checks
-        let no_outcome_mint = if !cfg!(feature = "local-test") {
-            unsafe { *(market_ptr.add(WORLD_NO_MINT_OFFSET) as *const Pubkey) }
-        } else {
-            self.no_outcome_mint.key()
+            (self.yes_outcome_mint.key(), self.no_outcome_mint.key())
         };
 
         msg!("yes: {}", yes_outcome_mint);
@@ -123,8 +130,16 @@ impl<'info> CreatePool<'info> {
 
         token_interface::transfer_checked(cpi_ctx, amount, self.mint.decimals)?;
 
-        // set pool account
+        // set funder and pool account
         let now = Clock::get()?.unix_timestamp;
+
+        self.funder.set_inner(Funder {
+            weight_seconds: 0,
+            amount,
+            last_update_ts: now,
+            funder: *self.signer.key,
+            bump: bumps.funder,
+        });
 
         self.pool.set_inner(Pool {
             creator: *self.signer.key,
@@ -142,6 +157,8 @@ impl<'info> CreatePool<'info> {
             yes_stake_seconds: 0,
             no_last_update_ts: now,
             no_stake_seconds: 0,
+            funder_last_update_ts: now,
+            funder_weight_seconds: 0,
             fee_bps: self.config.fee_bps,
             status: crate::PoolStatus::Open,
             vault_bump: bumps.pool_vault,

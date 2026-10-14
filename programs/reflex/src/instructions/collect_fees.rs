@@ -4,12 +4,12 @@ use anchor_spl::{
     token_interface::{self, Mint, TokenAccount, TokenInterface},
 };
 
-use crate::{constants::*, error::ReflexError, Pool};
+use crate::{constants::*, error::ReflexError, utils, Funder, Pool};
 
 #[derive(Accounts)]
 pub struct CollectFees<'info> {
-    #[account(mut, address = pool.creator)]
-    pub creator: Signer<'info>,
+    #[account(mut)]
+    pub signer: Signer<'info>,
 
     #[account(
         mut,
@@ -18,6 +18,14 @@ pub struct CollectFees<'info> {
         constraint = pool.is_yes() || pool.is_no() @ ReflexError::PooltNotSettled
     )]
     pub pool: Account<'info, Pool>,
+
+    #[account(
+        mut,
+        close = signer,
+        seeds = [FUNDER_SEED, pool.key().as_ref(), signer.key().as_ref()],
+        bump = funder.bump
+    )]
+    pub funder: Account<'info, Funder>,
 
     /// CHECK: no validation because it could be closed
     // #[account(/* owner = *predict_program.key, */ constraint = market.data_len() == 0)]
@@ -36,11 +44,11 @@ pub struct CollectFees<'info> {
 
     #[account(
         init_if_needed,
-        payer = creator,
+        payer = signer,
         associated_token::mint = outcome_mint,
-        associated_token::authority = creator
+        associated_token::authority = signer
     )]
-    pub creator_ata: InterfaceAccount<'info, TokenAccount>,
+    pub signer_ata: InterfaceAccount<'info, TokenAccount>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -49,35 +57,66 @@ pub struct CollectFees<'info> {
 
 impl<'info> CollectFees<'info> {
     pub fn proccess_ix(&mut self) -> Result<()> {
-        let collected_fees =
+        self.funder.accrue(self.pool.resolution_timestamp)?;
+
+        let total_collected_fees =
             if self.pool.is_yes() && self.outcome_mint.key() == self.pool.yes_outcome_mint {
-                let fees = self.pool.available_yes_fees;
-                self.pool.available_yes_fees = 0;
-                fees
+                self.pool.available_yes_fees
             } else if self.pool.is_no() && self.outcome_mint.key() == self.pool.no_outcome_mint {
-                let fees = self.pool.available_no_fees;
-                self.pool.available_no_fees = 0;
-                fees
+                self.pool.available_no_fees
             } else {
                 return Err(ReflexError::WrongMint.into());
             };
 
-        require!(collected_fees > 0, ReflexError::InvalidAmount);
+        let funder_collected_fee = utils::normalized_share(
+            total_collected_fees,
+            self.funder.weight_seconds,
+            self.pool.funder_weight_seconds,
+        )?;
 
-        // Transfer the collected outcome fees to the creator.
-        let market_binding = self.market.key();
-        let signer_seeds: &[&[&[u8]]] = &[&[POOL_SEED, market_binding.as_ref(), &[self.pool.bump]]];
+        // update pool
+        if self.pool.is_yes() {
+            self.pool.available_yes_fees = self
+                .pool
+                .available_yes_fees
+                .checked_sub(funder_collected_fee)
+                .ok_or(ProgramError::ArithmeticOverflow)?;
+        } else if self.pool.is_no() {
+            self.pool.available_no_fees = self
+                .pool
+                .available_no_fees
+                .checked_sub(funder_collected_fee)
+                .ok_or(ProgramError::ArithmeticOverflow)?;
+        }
+        self.pool.funder_weight_seconds = self
+            .pool
+            .funder_weight_seconds
+            .checked_sub(self.funder.weight_seconds)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
 
-        let cpi_accounts = token_interface::TransferChecked {
-            from: self.pool_outcome_vault.to_account_info(),
-            mint: self.outcome_mint.to_account_info(),
-            to: self.creator_ata.to_account_info(),
-            authority: self.pool.to_account_info(),
-        };
+        // transfer the collected outcome fees to the signer
+        if funder_collected_fee > 0 {
+            let market_binding = self.market.key();
+            let signer_seeds: &[&[&[u8]]] =
+                &[&[POOL_SEED, market_binding.as_ref(), &[self.pool.bump]]];
 
-        let cpi_ctx =
-            CpiContext::new(*self.token_program.key, cpi_accounts).with_signer(signer_seeds);
+            let cpi_accounts = token_interface::TransferChecked {
+                from: self.pool_outcome_vault.to_account_info(),
+                mint: self.outcome_mint.to_account_info(),
+                to: self.signer_ata.to_account_info(),
+                authority: self.pool.to_account_info(),
+            };
 
-        token_interface::transfer_checked(cpi_ctx, collected_fees, self.outcome_mint.decimals)
+            let cpi_ctx =
+                CpiContext::new(*self.token_program.key, cpi_accounts).with_signer(signer_seeds);
+
+            token_interface::transfer_checked(
+                cpi_ctx,
+                funder_collected_fee,
+                self.outcome_mint.decimals,
+            )?;
+        }
+
+        Ok(())
     }
 }

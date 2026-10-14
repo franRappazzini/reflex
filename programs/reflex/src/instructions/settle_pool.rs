@@ -33,6 +33,7 @@ impl<'info> SettlePool<'info> {
 
         self.pool.accrue_yes(now)?;
         self.pool.accrue_no(now)?;
+        self.pool.accrue_funders(now)?;
         self.pool.resolution_timestamp = now;
         self.pool.status = decision;
 

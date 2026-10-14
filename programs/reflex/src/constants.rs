@@ -27,3 +27,6 @@ pub const VAULT_SEED: &[u8] = b"vault";
 
 #[constant]
 pub const POSITION_SEED: &[u8] = b"position";
+
+#[constant]
+pub const FUNDER_SEED: &[u8] = b"funder";
