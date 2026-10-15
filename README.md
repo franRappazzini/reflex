@@ -99,15 +99,15 @@ To use the Surfpool watch workflow instead, see the
 
 ## Next features
 
-- 👨🏻‍💻 — Open incentive funding: allow anyone to contribute to a pool,
+- ✅ — Open incentive funding: allow anyone to contribute to a pool,
   rather than limiting contributions to its creator.
+- 👨🏻‍💻 — Rework staker positions: replace per-staker Position PDAs with an
+  SPL-token-based position flow.
 - ⬜ — Complete World integration: automate market/pool creation, settlement,
   and the end-to-end lifecycle, including claiming market winnings and
   collecting fees through World.
-- ⬜ — Rework staker positions: replace per-staker Position PDAs with an
-  SPL-token-based position flow.
 - ⬜ — Add Kamino integration so incentive funders can earn yield on
-  deposited funds.
+deposited funds.
 <!-- - **Finalize reward and fee accounting:** complete normalization and fee
   handling in reward claims, with tests for precision, rounding, and pool
   edge cases.
