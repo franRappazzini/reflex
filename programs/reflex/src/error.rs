@@ -20,4 +20,6 @@ pub enum ReflexError {
     InvalidAmount,
     #[msg("Invalid timestamp")]
     InvalidTimestamp,
+    #[msg("Cannot deserialize extension")]
+    NoDeserializeExtension,
 }

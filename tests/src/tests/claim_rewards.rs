@@ -2,13 +2,16 @@ use std::rc::Rc;
 
 use anchor_client::CommitmentConfig;
 use solana_signer::Signer;
-use spl_associated_token_account_interface::address::get_associated_token_address;
 
-use crate::utils::{fetch_account, IncentiveSetup, OutcomeSetup, TestContext};
+use crate::utils::{
+    associated_token_address, fetch_account, token_balance, IncentiveSetup, OutcomeSetup,
+    TestContext,
+};
 
 pub(super) fn run(ctx: &TestContext, incentive: &IncentiveSetup, yes: &OutcomeSetup) {
     let staker = ctx.accounts.staker.pubkey();
-    let staker_incentive_ata = get_associated_token_address(&staker, &incentive.mint);
+    let staker_incentive_ata =
+        associated_token_address(&staker, &incentive.mint, &spl_token_interface::ID);
     let yes_tokens_before = token_balance(ctx, &yes.ata);
     let pool: reflex::Pool = fetch_account(ctx, &ctx.pdas.pool);
     let position: reflex::Position = fetch_account(ctx, &ctx.pdas.position);
@@ -45,7 +48,8 @@ pub(super) fn run(ctx: &TestContext, incentive: &IncentiveSetup, yes: &OutcomeSe
             pool_outcome_vault: yes.vault,
             staker_ata: staker_incentive_ata,
             staker_outcome_ata: yes.ata,
-            token_program: spl_token_interface::ID,
+            spl_token_program: spl_token_interface::ID,
+            token_program: spl_token_2022_interface::ID,
             associated_token_program: spl_associated_token_account_interface::program::ID,
             system_program: solana_sdk_ids::system_program::id(),
         })
@@ -79,17 +83,4 @@ pub(super) fn run(ctx: &TestContext, incentive: &IncentiveSetup, yes: &OutcomeSe
     );
 
     println!("✅ Claim rewards transaction: {signature}");
-}
-
-fn token_balance(ctx: &TestContext, address: &solana_pubkey::Pubkey) -> u64 {
-    use anchor_client::anchor_lang::prelude::program_pack::Pack;
-
-    let account = ctx
-        .program
-        .rpc()
-        .get_account(address)
-        .expect("failed to fetch token account");
-    spl_token_interface::state::Account::unpack(&account.data)
-        .expect("failed to decode token account")
-        .amount
 }

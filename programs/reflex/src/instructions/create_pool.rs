@@ -1,7 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
+use anchor_spl::{
+    token::Token,
+    token_2022::Token2022,
+    token_interface::{self, Mint, TokenAccount},
+};
 
-use crate::{constants::*, error::ReflexError, Config, Funder, Pool};
+use crate::{constants::*, error::ReflexError, utils, Config, Funder, Pool};
 
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
@@ -36,74 +40,96 @@ pub struct CreatePool<'info> {
     #[account(owner = WORLD_PROGRAM_ID, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
-    pub mint: InterfaceAccount<'info, Mint>,
+    pub mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub yes_outcome_mint: InterfaceAccount<'info, Mint>,
-    pub no_outcome_mint: InterfaceAccount<'info, Mint>,
+    pub yes_outcome_mint: Box<InterfaceAccount<'info, Mint>>,
+    pub no_outcome_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init,
+        payer = signer,
+        mint::decimals = yes_outcome_mint.decimals,
+        mint::authority = pool,
+        mint::freeze_authority = pool,
+        extensions::metadata_pointer::authority = pool,
+        extensions::metadata_pointer::metadata_address = yes_receipt_mint,
+    )]
+    pub yes_receipt_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init,
+        payer = signer,
+        mint::decimals = no_outcome_mint.decimals,
+        mint::authority = pool,
+        mint::freeze_authority = pool,
+        extensions::metadata_pointer::authority = pool,
+        extensions::metadata_pointer::metadata_address = no_receipt_mint,
+    )]
+    pub no_receipt_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         init,
         payer = signer,
         token::mint = mint,
+        token::token_program = spl_token_program,
         token::authority = pool,
         seeds = [VAULT_SEED, pool.key().as_ref()],
         bump
     )]
-    pub pool_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pool_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         init,
         payer = signer,
         token::mint = yes_outcome_mint,
+        token::token_program = token_program,
         token::authority = pool,
         seeds = [VAULT_SEED, pool.key().as_ref(), yes_outcome_mint.key().as_ref()],
         bump
     )]
-    pub pool_yes_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pool_yes_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         init,
         payer = signer,
         token::mint = no_outcome_mint,
+        token::token_program = token_program,
         token::authority = pool,
         seeds = [VAULT_SEED, pool.key().as_ref(), no_outcome_mint.key().as_ref()],
         bump
     )]
-    pub pool_no_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pool_no_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
-        associated_token::authority = signer
+        associated_token::authority = signer,
+        associated_token::token_program = spl_token_program,
     )]
-    pub signer_ata: InterfaceAccount<'info, TokenAccount>,
+    pub signer_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    pub token_program: Interface<'info, TokenInterface>,
+    pub spl_token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> CreatePool<'info> {
     pub fn proccess_ix(&mut self, amount: u64, bumps: CreatePoolBumps) -> Result<()> {
         require!(amount > 0, ReflexError::InvalidAmount);
-        if !cfg!(feature = "local-test") {
-            require!(
-                MINT_WHITELIST.contains(&self.mint.key()),
-                ReflexError::WrongMint
-            );
-        }
+        require!(
+            MINT_WHITELIST.contains(&self.mint.key()),
+            ReflexError::WrongMint
+        );
 
         // get world market data
-        let market_ptr = self.market.try_borrow_data().unwrap().as_ptr();
+        let (yes_outcome_mint, no_outcome_mint) = {
+            let market_ptr = self.market.try_borrow_data().unwrap().as_ptr();
 
-        // TEST: to avoid real mint checks
-        let (yes_outcome_mint, no_outcome_mint) = if !cfg!(feature = "local-test") {
             // SAFE: because market is validated by owner and data len
             (
                 unsafe { *(market_ptr.add(WORLD_YES_MINT_OFFSET) as *const Pubkey) },
                 unsafe { *(market_ptr.add(WORLD_NO_MINT_OFFSET) as *const Pubkey) },
             )
-        } else {
-            (self.yes_outcome_mint.key(), self.no_outcome_mint.key())
         };
 
         msg!("yes: {}", yes_outcome_mint);
@@ -126,9 +152,48 @@ impl<'info> CreatePool<'info> {
             to: self.pool_vault.to_account_info(),
         };
 
-        let cpi_ctx = CpiContext::new(*self.token_program.key, cpi_accounts);
+        let cpi_ctx = CpiContext::new(*self.spl_token_program.key, cpi_accounts);
 
         token_interface::transfer_checked(cpi_ctx, amount, self.mint.decimals)?;
+
+        // initialize metatada to receipt tokens
+        let yes_metadata = utils::fetch_metadata(&self.yes_outcome_mint)?;
+        let no_metadata = utils::fetch_metadata(&self.no_outcome_mint)?;
+
+        /*
+        > Program logged: "TokenMetadata {"
+                update_authority: OptionalNonZeroPubkey(
+                    JE8a4FHFEtLRs38QfovU2u2zXxhQAaaCKGgxwNscw1Ns,
+                ),
+                mint: FGRKYHBNAySxbMTTAx76655dcGQvyTG7DbgAZTCMVXqp,
+                name: "XRP Up",
+                symbol: "XRP-UP",
+                uri: "https://m.world.xyz/FGRKYHBNAySxbMTTAx76655dcGQvyTG7DbgAZTCMVXqp",
+                additional_metadata: [],
+            }
+        */
+
+        let market_binding = self.market.key();
+        let signer_seeds: &[&[&[u8]]] = &[&[POOL_SEED, market_binding.as_ref(), &[bumps.pool]]];
+
+        utils::initialize_metadata(
+            &self.yes_receipt_mint,
+            &yes_metadata,
+            &self.signer,
+            &self.pool,
+            &self.token_program,
+            &self.system_program,
+            signer_seeds,
+        )?;
+        utils::initialize_metadata(
+            &self.no_receipt_mint,
+            &no_metadata,
+            &self.signer,
+            &self.pool,
+            &self.token_program,
+            &self.system_program,
+            signer_seeds,
+        )?;
 
         // set funder and pool account
         let now = Clock::get()?.unix_timestamp;
@@ -146,6 +211,8 @@ impl<'info> CreatePool<'info> {
             incentive_mint: self.mint.key(),
             yes_outcome_mint,
             no_outcome_mint,
+            yes_receipt_mint: self.yes_receipt_mint.key(),
+            no_receipt_mint: self.no_receipt_mint.key(),
             total_incentive_amount: amount,
             total_yes_staked: 0,
             total_no_staked: 0,

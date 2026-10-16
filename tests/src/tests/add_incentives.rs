@@ -1,59 +1,20 @@
+use solana_signer::Signer;
 use std::rc::Rc;
 
-use anchor_client::Transaction;
-use solana_keypair::Keypair;
-use solana_signer::Signer;
-use spl_associated_token_account_interface::{
-    address::get_associated_token_address, instruction::create_associated_token_account,
+use crate::utils::{
+    associated_token_address, derive_funder_pda, fetch_account, IncentiveSetup, TestContext,
 };
-use spl_token_interface::instruction::transfer_checked;
 
-use crate::utils::{derive_funder_pda, fetch_account, IncentiveSetup, TestContext, USDC_DECIMALS};
-
-pub(super) fn run(ctx: &TestContext, funder: &Keypair, incentive: &IncentiveSetup, amount: u64) {
+pub(super) fn run(
+    ctx: &TestContext,
+    funder: &solana_keypair::Keypair,
+    incentive: &IncentiveSetup,
+    amount: u64,
+) {
     let funder_address = funder.pubkey();
-    let funder_ata = get_associated_token_address(&funder_address, &incentive.mint);
-    let creator = ctx.accounts.creator.pubkey();
-    let creator_ata = get_associated_token_address(&creator, &incentive.mint);
+    let funder_ata =
+        associated_token_address(&funder_address, &incentive.mint, &spl_token_interface::ID);
     let funder_pda = derive_funder_pda(&ctx.program.id(), &ctx.pdas.pool, &funder_address);
-
-    if funder_address != creator {
-        let create_funder_ata = create_associated_token_account(
-            &funder_address,
-            &funder_address,
-            &incentive.mint,
-            &spl_token_interface::ID,
-        );
-        let transfer_incentives = transfer_checked(
-            &spl_token_interface::ID,
-            &creator_ata,
-            &incentive.mint,
-            &funder_ata,
-            &creator,
-            &[],
-            amount,
-            USDC_DECIMALS,
-        )
-        .expect("failed to create incentive token transfer instruction");
-        let mut setup_tx = Transaction::new_with_payer(
-            &[create_funder_ata, transfer_incentives],
-            Some(&funder_address),
-        );
-        setup_tx.sign(
-            &[
-                funder.insecure_clone(),
-                ctx.accounts.creator.insecure_clone(),
-            ],
-            ctx.program
-                .rpc()
-                .get_latest_blockhash()
-                .expect("failed to get recent blockhash"),
-        );
-        ctx.program
-            .rpc()
-            .send_and_confirm_transaction(&setup_tx)
-            .expect("failed to fund the independent funder's token account");
-    }
 
     let signature = ctx
         .program

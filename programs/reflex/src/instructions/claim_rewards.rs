@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{self, Mint, TokenAccount, TokenInterface},
+    token::Token,
+    token_2022::Token2022,
+    token_interface::{self, Mint, TokenAccount},
 };
 
 use crate::{constants::*, error::ReflexError, utils, Pool, Position};
@@ -37,6 +39,7 @@ pub struct ClaimRewards<'info> {
     #[account(
         mut,
         token::mint = mint,
+        token::token_program = spl_token_program,
         token::authority = pool,
         seeds = [VAULT_SEED, pool.key().as_ref()],
         bump = pool.vault_bump
@@ -46,6 +49,7 @@ pub struct ClaimRewards<'info> {
     #[account(
         mut,
         token::mint = outcome_mint,
+        token::token_program = token_program,
         token::authority = pool,
         seeds = [VAULT_SEED, pool.key().as_ref(), outcome_mint.key().as_ref()],
         bump
@@ -56,6 +60,7 @@ pub struct ClaimRewards<'info> {
         init_if_needed,
         payer = staker,
         associated_token::mint = mint,
+        associated_token::token_program = spl_token_program,
         associated_token::authority = staker
     )]
     pub staker_ata: InterfaceAccount<'info, TokenAccount>,
@@ -63,12 +68,14 @@ pub struct ClaimRewards<'info> {
     #[account(
         mut,
         associated_token::mint = outcome_mint,
+        associated_token::token_program = token_program,
         associated_token::authority = staker
     )]
     pub staker_outcome_ata: InterfaceAccount<'info, TokenAccount>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub spl_token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
 
@@ -136,8 +143,8 @@ impl<'info> ClaimRewards<'info> {
                 authority: self.pool.to_account_info(),
             };
 
-            let cpi_ctx =
-                CpiContext::new(*self.token_program.key, cpi_accounts).with_signer(signer_seeds);
+            let cpi_ctx = CpiContext::new(*self.spl_token_program.key, cpi_accounts)
+                .with_signer(signer_seeds);
 
             token_interface::transfer_checked(cpi_ctx, payout, self.mint.decimals)?;
         }

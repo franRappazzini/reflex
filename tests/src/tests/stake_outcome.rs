@@ -16,7 +16,7 @@ pub(super) fn run(ctx: &TestContext, outcome: &OutcomeSetup, amount: u64) -> Res
             outcome_mint: outcome.mint,
             pool_outcome_vault: outcome.vault,
             staker_ata: outcome.ata,
-            token_program: spl_token_interface::ID,
+            token_program: spl_token_2022_interface::ID,
             system_program: solana_sdk_ids::system_program::id(),
         })
         .args(reflex::instruction::StakeOutcome { amount })

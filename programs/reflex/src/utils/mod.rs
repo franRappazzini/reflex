@@ -1,6 +1,25 @@
-use anchor_lang::{prelude::ProgramError, require, Result};
+use anchor_lang::{
+    prelude::{
+        Account, CpiContext, InterfaceAccount, Program, ProgramError, Rent, Signer, SolanaSysvar,
+        System,
+    },
+    require, system_program, AnchorDeserialize, Result, ToAccountInfo,
+};
+use anchor_spl::{
+    token_2022::{
+        spl_token_2022::{
+            extension::{BaseStateWithExtensions, ExtensionType, StateWithExtensions},
+            state::Mint as Mint2022,
+        },
+        Token2022,
+    },
+    token_interface::{
+        spl_token_metadata_interface::state::TokenMetadata, token_metadata_initialize, Mint,
+        TokenMetadataInitialize,
+    },
+};
 
-use crate::{error::ReflexError, BPS_DENOMINATOR};
+use crate::{error::ReflexError, Pool, BPS_DENOMINATOR};
 
 /// Returns a net amount plus the exact fee that should be charged on the given input.
 ///
@@ -67,4 +86,83 @@ pub fn accrue(staked: u64, acc: &mut u128, last_ts: &mut i64, ts: i64) -> Result
     *last_ts = ts;
 
     Ok(())
+}
+
+pub fn fetch_metadata(mint: &InterfaceAccount<Mint>) -> Result<TokenMetadata> {
+    let mint_account_info = mint.to_account_info();
+    let mint_data = mint_account_info.try_borrow_data()?;
+
+    // unpack mint state along with its extensions
+    let mint_state = StateWithExtensions::<Mint2022>::unpack(&mint_data)?;
+    let metadata: Result<TokenMetadata> =
+        if let Ok(extension_bytes) = mint_state.get_extension_bytes::<TokenMetadata>() {
+            // manually deserialize the borsh serialized byte slice
+            TokenMetadata::try_from_slice(extension_bytes)
+                .map_err(|_| ReflexError::NoDeserializeExtension.into())
+        } else {
+            Err(ReflexError::NoDeserializeExtension.into())
+        };
+
+    let metadata = metadata?;
+
+    Ok(metadata)
+}
+
+pub fn initialize_metadata<'info>(
+    mint: &InterfaceAccount<'info, Mint>,
+    metadata: &TokenMetadata,
+    signer: &Signer<'info>,
+    pool: &Account<'info, Pool>,
+    token_program: &Program<'info, Token2022>,
+    system_program: &Program<'info, System>,
+    signer_seeds: &[&[&[u8]]],
+) -> Result<()> {
+    let name = format!("R-{}", metadata.name);
+    let symbol = format!("R-{}", metadata.symbol);
+    let uri = &metadata.uri;
+    let token_metadata = TokenMetadata {
+        name: name.clone(),
+        symbol: symbol.clone(),
+        uri: uri.clone(),
+        ..Default::default()
+    };
+
+    // calculate the space need for the mint account with the desired extensions
+    let space =
+        ExtensionType::try_calculate_account_len::<Mint2022>(&[ExtensionType::MetadataPointer])
+            .unwrap();
+
+    let meta_data_space = token_metadata.tlv_size_of().unwrap();
+
+    let lamports = Rent::get()?.minimum_balance(space + meta_data_space);
+
+    // transfer additional lamports to mint account
+    system_program::transfer(
+        CpiContext::new(
+            *system_program.key,
+            system_program::Transfer {
+                from: signer.to_account_info(),
+                to: mint.to_account_info(),
+            },
+        ),
+        lamports,
+    )?;
+
+    // initialize token metadata
+    token_metadata_initialize(
+        CpiContext::new_with_signer(
+            *token_program.key,
+            TokenMetadataInitialize {
+                program_id: token_program.to_account_info(),
+                mint: mint.to_account_info(),
+                metadata: mint.to_account_info(),
+                mint_authority: pool.to_account_info(),
+                update_authority: pool.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        name,
+        symbol,
+        uri.clone(),
+    )
 }

@@ -1,70 +1,48 @@
 use std::rc::Rc;
 
-use anchor_client::Transaction;
+use solana_keypair::Keypair;
 use solana_signer::Signer;
 
 use crate::utils::{
-    derive_outcome_vault, prepare_mint_and_ata, IncentiveSetup, OutcomeSetup, PoolSetup,
-    TestContext, INITIAL_MINT_AMOUNT, INITIAL_OUTCOME_AMOUNT, INITIAL_POOL_FUNDING_AMOUNT,
-    USDC_DECIMALS,
+    associated_token_address, derive_outcome_vault, IncentiveSetup, OutcomeSetup, PoolSetup,
+    TestContext, INITIAL_POOL_FUNDING_AMOUNT,
 };
 
 pub(super) fn run(ctx: &TestContext) -> PoolSetup {
-    let incentive_mint = prepare_mint_and_ata(
-        &ctx.program,
+    let incentive_mint = reflex::constants::USDC_MINT_ID;
+    let yes = OutcomeSetup {
+        mint: ctx.world_outcome_mints.yes,
+        ata: associated_token_address(
+            &ctx.accounts.staker.pubkey(),
+            &ctx.world_outcome_mints.yes,
+            &spl_token_2022_interface::ID,
+        ),
+        vault: derive_outcome_vault(
+            &ctx.program.id(),
+            &ctx.pdas.pool,
+            &ctx.world_outcome_mints.yes,
+        ),
+    };
+    let no = OutcomeSetup {
+        mint: ctx.world_outcome_mints.no,
+        ata: associated_token_address(
+            &ctx.accounts.staker.pubkey(),
+            &ctx.world_outcome_mints.no,
+            &spl_token_2022_interface::ID,
+        ),
+        vault: derive_outcome_vault(
+            &ctx.program.id(),
+            &ctx.pdas.pool,
+            &ctx.world_outcome_mints.no,
+        ),
+    };
+    let yes_receipt_mint = Keypair::new();
+    let no_receipt_mint = Keypair::new();
+    let incentive_ata = associated_token_address(
         &ctx.accounts.creator.pubkey(),
-        USDC_DECIMALS,
-        INITIAL_MINT_AMOUNT,
+        &incentive_mint,
+        &spl_token_interface::ID,
     );
-    let incentive_mint_address = incentive_mint.mint.pubkey();
-    let yes = prepare_mint_and_ata(
-        &ctx.program,
-        &ctx.accounts.staker.pubkey(),
-        USDC_DECIMALS,
-        INITIAL_OUTCOME_AMOUNT,
-    );
-    let no = prepare_mint_and_ata(
-        &ctx.program,
-        &ctx.accounts.staker.pubkey(),
-        USDC_DECIMALS,
-        INITIAL_OUTCOME_AMOUNT,
-    );
-
-    let yes_setup = OutcomeSetup {
-        mint: yes.mint.pubkey(),
-        ata: yes.ata,
-        vault: derive_outcome_vault(&ctx.program.id(), &ctx.pdas.pool, &yes.mint.pubkey()),
-    };
-    let no_setup = OutcomeSetup {
-        mint: no.mint.pubkey(),
-        ata: no.ata,
-        vault: derive_outcome_vault(&ctx.program.id(), &ctx.pdas.pool, &no.mint.pubkey()),
-    };
-
-    // The NO token setup is a separate transaction to keep pool creation within packet limits.
-    let mut no_setup_tx = Transaction::new_with_payer(
-        &[
-            no.create_account_ix,
-            no.init_mint_ix,
-            no.create_ata_ix,
-            no.mint_to_ix,
-        ],
-        Some(&ctx.accounts.staker.pubkey()),
-    );
-    no_setup_tx.sign(
-        &[
-            no.mint.insecure_clone(),
-            ctx.accounts.staker.insecure_clone(),
-        ],
-        ctx.program
-            .rpc()
-            .get_latest_blockhash()
-            .expect("failed to get recent blockhash"),
-    );
-    ctx.program
-        .rpc()
-        .send_and_confirm_transaction(&no_setup_tx)
-        .expect("failed to prepare NO outcome mint");
 
     let signature = ctx
         .program
@@ -75,31 +53,25 @@ pub(super) fn run(ctx: &TestContext) -> PoolSetup {
             pool: ctx.pdas.pool,
             funder: ctx.pdas.funder,
             market: ctx.world_random_market,
-            mint: incentive_mint_address,
-            yes_outcome_mint: yes_setup.mint,
-            no_outcome_mint: no_setup.mint,
-            signer_ata: incentive_mint.ata,
+            mint: incentive_mint,
+            yes_outcome_mint: yes.mint,
+            no_outcome_mint: no.mint,
+            yes_receipt_mint: yes_receipt_mint.pubkey(),
+            no_receipt_mint: no_receipt_mint.pubkey(),
+            signer_ata: incentive_ata,
             pool_vault: ctx.pdas.pool_vault,
-            pool_yes_vault: yes_setup.vault,
-            pool_no_vault: no_setup.vault,
-            token_program: spl_token_interface::ID,
+            pool_yes_vault: yes.vault,
+            pool_no_vault: no.vault,
+            spl_token_program: spl_token_interface::ID,
+            token_program: spl_token_2022_interface::ID,
             system_program: solana_sdk_ids::system_program::id(),
         })
         .args(reflex::instruction::CreatePool {
             amount: INITIAL_POOL_FUNDING_AMOUNT,
         })
-        .instruction(incentive_mint.create_account_ix)
-        .instruction(incentive_mint.init_mint_ix)
-        .instruction(incentive_mint.create_ata_ix)
-        .instruction(incentive_mint.mint_to_ix)
-        .instruction(yes.create_account_ix)
-        .instruction(yes.init_mint_ix)
-        .instruction(yes.create_ata_ix)
-        .instruction(yes.mint_to_ix)
         .payer(Rc::from(ctx.accounts.creator.insecure_clone()))
-        .signer(incentive_mint.mint)
-        .signer(yes.mint)
-        .signer(ctx.accounts.staker.insecure_clone())
+        .signer(yes_receipt_mint)
+        .signer(no_receipt_mint)
         .send()
         .expect("create pool transaction failed");
 
@@ -107,10 +79,10 @@ pub(super) fn run(ctx: &TestContext) -> PoolSetup {
 
     PoolSetup {
         incentive: IncentiveSetup {
-            mint: incentive_mint_address,
-            ata: incentive_mint.ata,
+            mint: incentive_mint,
+            ata: incentive_ata,
         },
-        yes: yes_setup,
-        no: no_setup,
+        yes,
+        no,
     }
 }

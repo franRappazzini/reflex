@@ -1,11 +1,13 @@
 use std::rc::Rc;
 
-use anchor_client::{anchor_lang::prelude::program_pack::Pack, CommitmentConfig};
+use anchor_client::CommitmentConfig;
 use solana_keypair::Keypair;
 use solana_signer::Signer;
-use spl_associated_token_account_interface::address::get_associated_token_address;
 
-use crate::utils::{derive_funder_pda, fetch_account, OutcomeSetup, TestContext};
+use crate::utils::{
+    associated_token_address, derive_funder_pda, fetch_account, token_balance, OutcomeSetup,
+    TestContext,
+};
 
 pub(super) fn run(ctx: &TestContext, signer: &Keypair, outcome: &OutcomeSetup) {
     let pool_before: reflex::Pool = fetch_account(ctx, &ctx.pdas.pool);
@@ -51,7 +53,11 @@ pub(super) fn run(ctx: &TestContext, signer: &Keypair, outcome: &OutcomeSetup) {
         "funder's winning-side fee share should be positive"
     );
 
-    let signer_ata = get_associated_token_address(&signer_address, &outcome.mint);
+    let signer_ata = associated_token_address(
+        &signer_address,
+        &outcome.mint,
+        &spl_token_2022_interface::ID,
+    );
     let signer_balance_before = token_balance(ctx, &signer_ata);
 
     let signature = ctx
@@ -66,7 +72,7 @@ pub(super) fn run(ctx: &TestContext, signer: &Keypair, outcome: &OutcomeSetup) {
             pool_outcome_vault: outcome.vault,
             signer_ata,
             associated_token_program: spl_associated_token_account_interface::program::ID,
-            token_program: spl_token_interface::ID,
+            token_program: spl_token_2022_interface::ID,
             system_program: solana_sdk_ids::system_program::id(),
         })
         .args(reflex::instruction::CollectFees {})
@@ -106,19 +112,4 @@ pub(super) fn run(ctx: &TestContext, signer: &Keypair, outcome: &OutcomeSetup) {
     );
 
     println!("Collect fees transaction: {signature}");
-}
-
-fn token_balance(ctx: &TestContext, address: &solana_pubkey::Pubkey) -> u64 {
-    let account = ctx
-        .program
-        .rpc()
-        .get_account_with_commitment(address, CommitmentConfig::confirmed())
-        .expect("failed to fetch token account")
-        .value;
-
-    account.map_or(0, |account| {
-        spl_token_interface::state::Account::unpack(&account.data)
-            .expect("failed to decode token account")
-            .amount
-    })
 }

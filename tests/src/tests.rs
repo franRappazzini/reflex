@@ -9,15 +9,14 @@ mod unstake_outcome;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anchor_client::anchor_lang::prelude::clock::SECONDS_PER_DAY;
-use anchor_client::anchor_lang::prelude::program_pack::Pack;
 use reflex::BPS_DENOMINATOR;
-use reqwest::blocking::Client;
 use serde_json::json;
 use solana_signer::Signer;
 
 use crate::utils::{
-    derive_funder_pda, fetch_account, setup, PoolSetup, TestContext, ADDITIONAL_INCENTIVE_AMOUNT,
-    INITIAL_OUTCOME_AMOUNT, INITIAL_POOL_FUNDING_AMOUNT, INITIAL_STAKE_AMOUNT,
+    derive_funder_pda, fetch_account, setup, surfnet_rpc, token_balance, PoolSetup, TestContext,
+    ADDITIONAL_INCENTIVE_AMOUNT, INITIAL_OUTCOME_AMOUNT, INITIAL_POOL_FUNDING_AMOUNT,
+    INITIAL_STAKE_AMOUNT,
 };
 
 #[test]
@@ -203,17 +202,6 @@ fn net_stake(amount: u64, fee_bps: u16) -> u64 {
     amount - fee_amount(amount, fee_bps)
 }
 
-fn token_balance(ctx: &TestContext, address: &solana_pubkey::Pubkey) -> u64 {
-    let account = ctx
-        .program
-        .rpc()
-        .get_account(address)
-        .expect("failed to fetch staker outcome token account");
-    spl_token_interface::state::Account::unpack(&account.data)
-        .expect("failed to decode staker outcome token account")
-        .amount
-}
-
 fn advance_time(days: i64) {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -222,33 +210,10 @@ fn advance_time(days: i64) {
 
     let absolute_timestamp = now + (days * SECONDS_PER_DAY as i64 * 1_000);
 
-    let client = Client::new();
-    let rpc_url = "http://127.0.0.1:8899";
-    let params = json!({
-        "absoluteTimestamp": absolute_timestamp
-    });
-
-    let payload = json!({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "surfnet_timeTravel",
-        "params": [params]
-    });
-
-    let response = client
-        .post(rpc_url)
-        .header("Content-Type", "application/json")
-        .json(&payload)
-        .send();
-    let response: serde_json::Value = response
-        .expect("failed to send Surfpool time-travel request")
-        .error_for_status()
-        .expect("Surfpool time-travel request returned an HTTP error")
-        .json()
-        .expect("failed to decode Surfpool time-travel response");
-    assert!(
-        response.get("error").is_none(),
-        "Surfpool time-travel failed: {response}"
-    );
+    surfnet_rpc(
+        "surfnet_timeTravel",
+        json!([{"absoluteTimestamp": absolute_timestamp}]),
+    )
+    .expect("failed to advance Surfpool time");
     println!("Advanced time by {days} days");
 }

@@ -9,7 +9,9 @@ pub struct Pool {
     pub incentive_mint: Pubkey,
     pub yes_outcome_mint: Pubkey,
     pub no_outcome_mint: Pubkey,
-
+    pub yes_receipt_mint: Pubkey,
+    pub no_receipt_mint: Pubkey,
+    
     pub yes_stake_seconds: u128,     // global accumulator
     pub no_stake_seconds: u128,      // global accumulator
     pub funder_weight_seconds: u128, // global accumulator
