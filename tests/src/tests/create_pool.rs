@@ -82,7 +82,8 @@ pub(super) fn run(ctx: &TestContext) -> PoolSetup {
             pool_vault: ctx.pdas.pool_vault,
             pool_yes_vault: yes_setup.vault,
             pool_no_vault: no_setup.vault,
-            token_program: spl_token_interface::ID,
+            spl_token_program: spl_token_interface::ID,
+            token_program: litesvm_token::TOKEN_ID,
             system_program: solana_sdk_ids::system_program::id(),
         })
         .args(reflex::instruction::CreatePool {

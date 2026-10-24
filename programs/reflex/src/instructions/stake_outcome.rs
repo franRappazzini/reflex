@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
+use anchor_spl::{
+    token_2022::Token2022,
+    token_interface::{self, Mint, TokenAccount},
+};
 
 use crate::{constants::*, error::ReflexError, utils, Pool, Position};
 
@@ -43,11 +46,12 @@ pub struct StakeOutcome<'info> {
     #[account(
         mut,
         associated_token::mint = outcome_mint,
-        associated_token::authority = staker
+        associated_token::authority = staker,
+        associated_token::token_program = token_program,
     )]
     pub staker_ata: InterfaceAccount<'info, TokenAccount>,
 
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
 

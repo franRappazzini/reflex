@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
+use anchor_spl::{
+    token_2022::Token2022,
+    token_interface::{self, Mint, TokenAccount, TokenInterface},
+};
 
 use crate::{constants::*, error::ReflexError, Config, Funder, Pool};
 
@@ -36,6 +39,9 @@ pub struct CreatePool<'info> {
     #[account(owner = WORLD_PROGRAM_ID, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
+    #[account(
+        mint::token_program = spl_token_program,
+    )]
     pub mint: InterfaceAccount<'info, Mint>,
 
     pub yes_outcome_mint: InterfaceAccount<'info, Mint>,
@@ -46,6 +52,7 @@ pub struct CreatePool<'info> {
         payer = signer,
         token::mint = mint,
         token::authority = pool,
+        token::token_program = spl_token_program,
         seeds = [VAULT_SEED, pool.key().as_ref()],
         bump
     )]
@@ -74,11 +81,13 @@ pub struct CreatePool<'info> {
     #[account(
         mut,
         associated_token::mint = mint,
-        associated_token::authority = signer
+        associated_token::authority = signer,
+        associated_token::token_program = spl_token_program
     )]
     pub signer_ata: InterfaceAccount<'info, TokenAccount>,
 
-    pub token_program: Interface<'info, TokenInterface>,
+    pub spl_token_program: Interface<'info, TokenInterface>, // to usdc
+    pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
 
@@ -126,7 +135,7 @@ impl<'info> CreatePool<'info> {
             to: self.pool_vault.to_account_info(),
         };
 
-        let cpi_ctx = CpiContext::new(*self.token_program.key, cpi_accounts);
+        let cpi_ctx = CpiContext::new(*self.spl_token_program.key, cpi_accounts);
 
         token_interface::transfer_checked(cpi_ctx, amount, self.mint.decimals)?;
 
