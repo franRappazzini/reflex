@@ -14,7 +14,7 @@ pub struct AddIncentives<'info> {
         bump = pool.bump,
         constraint = pool.is_open() @ ReflexError::MarketIsNotOpen
     )]
-    pub pool: Account<'info, Pool>,
+    pub pool: Box<Account<'info, Pool>>,
 
     #[account(
         init_if_needed,
@@ -23,14 +23,14 @@ pub struct AddIncentives<'info> {
         seeds = [FUNDER_SEED, pool.key().as_ref(), signer.key().as_ref()],
         bump
     )]
-    pub funder: Account<'info, Funder>,
+    pub funder: Box<Account<'info, Funder>>,
 
     /// CHECK: by owner and data len
     #[account(owner = WORLD_PROGRAM_ID, constraint = market.data_len() == WORLD_MARKET_SIZE)]
     pub market: UncheckedAccount<'info>,
 
     #[account(address = pool.incentive_mint)]
-    pub mint: InterfaceAccount<'info, Mint>,
+    pub mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         mut,
@@ -39,14 +39,14 @@ pub struct AddIncentives<'info> {
         seeds = [VAULT_SEED, pool.key().as_ref()],
         bump = pool.vault_bump
     )]
-    pub pool_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pool_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
         associated_token::authority = signer
     )]
-    pub signer_ata: InterfaceAccount<'info, TokenAccount>,
+    pub signer_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,

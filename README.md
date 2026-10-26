@@ -72,10 +72,10 @@ tests.
 
 ## Build and test locally
 
-Build the program with the feature used by the integration-test setup:
+Build the program:
 
 ```sh
-anchor build -- --features local-test
+anchor build
 ```
 
 In one terminal, start a local Surfnet (it will also start a local Solana validator and deploy the program):

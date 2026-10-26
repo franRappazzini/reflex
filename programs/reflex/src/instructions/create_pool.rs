@@ -15,7 +15,7 @@ pub struct CreatePool<'info> {
         seeds = [CONFIG_SEED],
         bump = config.bump
     )]
-    pub config: Account<'info, Config>,
+    pub config: Box<Account<'info, Config>>,
 
     #[account(
         init,
@@ -24,7 +24,7 @@ pub struct CreatePool<'info> {
         seeds = [POOL_SEED, market.key().as_ref()],
         bump
     )]
-    pub pool: Account<'info, Pool>,
+    pub pool: Box<Account<'info, Pool>>,
 
     #[account(
         init,
@@ -33,7 +33,7 @@ pub struct CreatePool<'info> {
         seeds = [FUNDER_SEED, pool.key().as_ref(), signer.key().as_ref()],
         bump
     )]
-    pub funder: Account<'info, Funder>,
+    pub funder: Box<Account<'info, Funder>>,
 
     /// CHECK: by owner and data len
     #[account(owner = WORLD_PROGRAM_ID, constraint = market.data_len() == WORLD_MARKET_SIZE)]
@@ -42,10 +42,13 @@ pub struct CreatePool<'info> {
     #[account(
         mint::token_program = spl_token_program,
     )]
-    pub mint: InterfaceAccount<'info, Mint>,
+    pub mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub yes_outcome_mint: InterfaceAccount<'info, Mint>,
-    pub no_outcome_mint: InterfaceAccount<'info, Mint>,
+    #[account(mint::token_program = token_program)]
+    pub yes_outcome_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(mint::token_program = token_program)]
+    pub no_outcome_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         init,
@@ -56,27 +59,29 @@ pub struct CreatePool<'info> {
         seeds = [VAULT_SEED, pool.key().as_ref()],
         bump
     )]
-    pub pool_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pool_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         init,
         payer = signer,
         token::mint = yes_outcome_mint,
         token::authority = pool,
+        token::token_program = token_program,
         seeds = [VAULT_SEED, pool.key().as_ref(), yes_outcome_mint.key().as_ref()],
         bump
     )]
-    pub pool_yes_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pool_yes_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         init,
         payer = signer,
         token::mint = no_outcome_mint,
         token::authority = pool,
+        token::token_program = token_program,
         seeds = [VAULT_SEED, pool.key().as_ref(), no_outcome_mint.key().as_ref()],
         bump
     )]
-    pub pool_no_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pool_no_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -84,7 +89,7 @@ pub struct CreatePool<'info> {
         associated_token::authority = signer,
         associated_token::token_program = spl_token_program
     )]
-    pub signer_ata: InterfaceAccount<'info, TokenAccount>,
+    pub signer_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub spl_token_program: Interface<'info, TokenInterface>, // to usdc
     pub token_program: Program<'info, Token2022>,
@@ -94,25 +99,24 @@ pub struct CreatePool<'info> {
 impl<'info> CreatePool<'info> {
     pub fn proccess_ix(&mut self, amount: u64, bumps: CreatePoolBumps) -> Result<()> {
         require!(amount > 0, ReflexError::InvalidAmount);
-        if !cfg!(feature = "local-test") {
-            require!(
-                MINT_WHITELIST.contains(&self.mint.key()),
-                ReflexError::WrongMint
+        require!(
+            MINT_WHITELIST.contains(&self.mint.key()),
+            ReflexError::WrongMint
+        );
+
+        let (yes_outcome_mint, no_outcome_mint) = {
+            let market_data = self.market.try_borrow_data()?;
+            let yes_outcome_mint = Pubkey::new_from_array(
+                market_data[WORLD_YES_MINT_OFFSET..WORLD_YES_MINT_OFFSET + 32]
+                    .try_into()
+                    .map_err(|_| ProgramError::InvalidAccountData)?,
             );
-        }
-
-        // get world market data
-        let market_ptr = self.market.try_borrow_data().unwrap().as_ptr();
-
-        // TEST: to avoid real mint checks
-        let (yes_outcome_mint, no_outcome_mint) = if !cfg!(feature = "local-test") {
-            // SAFE: because market is validated by owner and data len
-            (
-                unsafe { *(market_ptr.add(WORLD_YES_MINT_OFFSET) as *const Pubkey) },
-                unsafe { *(market_ptr.add(WORLD_NO_MINT_OFFSET) as *const Pubkey) },
-            )
-        } else {
-            (self.yes_outcome_mint.key(), self.no_outcome_mint.key())
+            let no_outcome_mint = Pubkey::new_from_array(
+                market_data[WORLD_NO_MINT_OFFSET..WORLD_NO_MINT_OFFSET + 32]
+                    .try_into()
+                    .map_err(|_| ProgramError::InvalidAccountData)?,
+            );
+            (yes_outcome_mint, no_outcome_mint)
         };
 
         msg!("yes: {}", yes_outcome_mint);

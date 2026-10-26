@@ -9,15 +9,15 @@ mod unstake_outcome;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anchor_client::anchor_lang::prelude::clock::SECONDS_PER_DAY;
-use anchor_client::anchor_lang::prelude::program_pack::Pack;
 use reflex::BPS_DENOMINATOR;
 use reqwest::blocking::Client;
 use serde_json::json;
 use solana_signer::Signer;
 
 use crate::utils::{
-    derive_funder_pda, fetch_account, setup, PoolSetup, TestContext, ADDITIONAL_INCENTIVE_AMOUNT,
-    INITIAL_OUTCOME_AMOUNT, INITIAL_POOL_FUNDING_AMOUNT, INITIAL_STAKE_AMOUNT,
+    derive_funder_pda, fetch_account, setup, token_amount, PoolSetup, TestContext,
+    ADDITIONAL_INCENTIVE_AMOUNT, INITIAL_OUTCOME_AMOUNT, INITIAL_POOL_FUNDING_AMOUNT,
+    INITIAL_STAKE_AMOUNT,
 };
 
 #[test]
@@ -70,6 +70,14 @@ fn test_reflex_lifecycle() {
         stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT / 2).is_err(),
         "staking should fail after the pool is settled"
     );
+}
+
+// #[test]
+fn test_initialize() {
+    let ctx = setup();
+
+    initialize::run(&ctx);
+    assert_initialized(&ctx);
 }
 
 fn assert_funder(ctx: &TestContext, funder: &solana_keypair::Keypair, expected_amount: u64) {
@@ -209,9 +217,7 @@ fn token_balance(ctx: &TestContext, address: &solana_pubkey::Pubkey) -> u64 {
         .rpc()
         .get_account(address)
         .expect("failed to fetch staker outcome token account");
-    spl_token_interface::state::Account::unpack(&account.data)
-        .expect("failed to decode staker outcome token account")
-        .amount
+    token_amount(&account.owner, &account.data)
 }
 
 fn advance_time(days: i64) {

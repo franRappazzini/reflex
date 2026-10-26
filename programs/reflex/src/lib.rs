@@ -10,7 +10,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use states::*;
 
-declare_id!("8i3X3C7WaRGxKLTpoecUqmPEueMULXVTRzEJFuyGrTHd");
+declare_id!("HQqk2aUfK95RFvwwQn3C1cP4cev18U9mWMW4nC35xJj1");
 
 #[program]
 pub mod reflex {

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use solana_signer::Signer;
 
-use crate::utils::{OutcomeSetup, TestContext};
+use crate::utils::{OutcomeSetup, TestContext, TOKEN_2022_ID};
 
 pub(super) fn run(ctx: &TestContext, outcome: &OutcomeSetup, amount: u64) -> Result<(), String> {
     let signature = ctx
@@ -16,7 +16,7 @@ pub(super) fn run(ctx: &TestContext, outcome: &OutcomeSetup, amount: u64) -> Res
             outcome_mint: outcome.mint,
             pool_outcome_vault: outcome.vault,
             staker_ata: outcome.ata,
-            token_program: spl_token_interface::ID,
+            token_program: TOKEN_2022_ID,
         })
         .args(reflex::instruction::UnstakeOutcome { amount })
         .payer(Rc::from(ctx.accounts.staker.insecure_clone()))

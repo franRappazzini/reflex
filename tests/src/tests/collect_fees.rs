@@ -1,11 +1,13 @@
 use std::rc::Rc;
 
-use anchor_client::{anchor_lang::prelude::program_pack::Pack, CommitmentConfig};
+use anchor_client::CommitmentConfig;
 use solana_keypair::Keypair;
 use solana_signer::Signer;
-use spl_associated_token_account_interface::address::get_associated_token_address;
+use spl_associated_token_account_interface::address::get_associated_token_address_with_program_id;
 
-use crate::utils::{derive_funder_pda, fetch_account, OutcomeSetup, TestContext};
+use crate::utils::{
+    derive_funder_pda, fetch_account, token_amount, OutcomeSetup, TestContext, TOKEN_2022_ID,
+};
 
 pub(super) fn run(ctx: &TestContext, signer: &Keypair, outcome: &OutcomeSetup) {
     let pool_before: reflex::Pool = fetch_account(ctx, &ctx.pdas.pool);
@@ -51,7 +53,11 @@ pub(super) fn run(ctx: &TestContext, signer: &Keypair, outcome: &OutcomeSetup) {
         "funder's winning-side fee share should be positive"
     );
 
-    let signer_ata = get_associated_token_address(&signer_address, &outcome.mint);
+    let signer_ata = get_associated_token_address_with_program_id(
+        &signer_address,
+        &outcome.mint,
+        &TOKEN_2022_ID,
+    );
     let signer_balance_before = token_balance(ctx, &signer_ata);
 
     let signature = ctx
@@ -66,7 +72,7 @@ pub(super) fn run(ctx: &TestContext, signer: &Keypair, outcome: &OutcomeSetup) {
             pool_outcome_vault: outcome.vault,
             signer_ata,
             associated_token_program: spl_associated_token_account_interface::program::ID,
-            token_program: spl_token_interface::ID,
+            token_program: TOKEN_2022_ID,
             system_program: solana_sdk_ids::system_program::id(),
         })
         .args(reflex::instruction::CollectFees {})
@@ -116,9 +122,5 @@ fn token_balance(ctx: &TestContext, address: &solana_pubkey::Pubkey) -> u64 {
         .expect("failed to fetch token account")
         .value;
 
-    account.map_or(0, |account| {
-        spl_token_interface::state::Account::unpack(&account.data)
-            .expect("failed to decode token account")
-            .amount
-    })
+    account.map_or(0, |account| token_amount(&account.owner, &account.data))
 }

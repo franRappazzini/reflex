@@ -31,12 +31,14 @@ pub struct CollectFees<'info> {
     // #[account(/* owner = *predict_program.key, */ constraint = market.data_len() == 0)]
     pub market: UncheckedAccount<'info>,
 
+    #[account(mint::token_program = token_program)]
     pub outcome_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         token::mint = outcome_mint,
         token::authority = pool,
+        token::token_program = token_program,
         seeds = [VAULT_SEED, pool.key().as_ref(), outcome_mint.key().as_ref()],
         bump
     )]
@@ -46,7 +48,8 @@ pub struct CollectFees<'info> {
         init_if_needed,
         payer = signer,
         associated_token::mint = outcome_mint,
-        associated_token::authority = signer
+        associated_token::authority = signer,
+        associated_token::token_program = token_program
     )]
     pub signer_ata: InterfaceAccount<'info, TokenAccount>,
 

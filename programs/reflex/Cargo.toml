@@ -19,12 +19,9 @@ anchor-debug = []
 custom-heap = []
 custom-panic = []
 
-local-test = []
-
 [dependencies]
 anchor-lang = { version = "1.2.0", features = ["init-if-needed"]}
 anchor-spl = "1.2.0"
-
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

@@ -30,12 +30,14 @@ pub struct UnstakeOutcome<'info> {
     )]
     pub position: Account<'info, Position>,
 
+    #[account(mint::token_program = token_program)]
     pub outcome_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
         token::mint = outcome_mint,
         token::authority = pool,
+        token::token_program = token_program,
         seeds = [VAULT_SEED, pool.key().as_ref(), outcome_mint.key().as_ref()],
         bump
     )]
