@@ -2,13 +2,13 @@ use anchor_lang::prelude::*;
 
 use crate::{utils, DISCRIMINATOR_SIZE};
 
-#[account]
+#[account(borsh)]
 #[derive(InitSpace)]
 pub struct Funder {
     pub weight_seconds: u128,
     pub amount: u64,
     pub last_update_ts: i64,
-    pub funder: Pubkey,
+    pub funder: Address,
     pub bump: u8,
 }
 

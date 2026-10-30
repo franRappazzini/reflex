@@ -2,13 +2,13 @@ use anchor_lang::prelude::*;
 
 use crate::{utils, DISCRIMINATOR_SIZE};
 
-#[account]
+#[account(borsh)]
 #[derive(InitSpace)]
 pub struct Pool {
-    pub creator: Pubkey,
-    pub incentive_mint: Pubkey,
-    pub yes_outcome_mint: Pubkey,
-    pub no_outcome_mint: Pubkey,
+    pub creator: Address,
+    pub incentive_mint: Address,
+    pub yes_outcome_mint: Address,
+    pub no_outcome_mint: Address,
 
     pub yes_stake_seconds: u128,     // global accumulator
     pub no_stake_seconds: u128,      // global accumulator
@@ -114,7 +114,7 @@ impl Pool {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, InitSpace, Clone, PartialEq)]
+#[derive(AnchorSerialize, AnchorDeserialize, IdlType, InitSpace, Clone, PartialEq)]
 pub enum PoolStatus {
     Open,
     Yes,

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{utils, DISCRIMINATOR_SIZE};
 
-#[account]
+#[account(borsh)]
 #[derive(InitSpace)]
 pub struct Position {
     pub yes_stake_seconds: u128,
@@ -11,7 +11,7 @@ pub struct Position {
     pub no_staked: u64,
     pub yes_last_update_ts: i64,
     pub no_last_update_ts: i64,
-    pub authority: Pubkey,
+    pub authority: Address,
     pub bump: u8,
 }
 

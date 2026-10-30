@@ -1,13 +1,10 @@
-use anchor_lang::{
-    constant,
-    prelude::{pubkey::pubkey, Pubkey},
-};
+use anchor_lang::{address, constant, Address};
 
-pub const WORLD_PROGRAM_ID: Pubkey = pubkey!("prediCtPZCttYMvm2W3PtxmMxLmT1dtN7riU6Cxh6tM"); // mainnet
-pub const USDC_MINT_ID: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"); // mainnet
-pub const WSOL_MINT_ID: Pubkey = pubkey!("So11111111111111111111111111111111111111112"); // mainnet
+pub const WORLD_PROGRAM_ID: Address = address!("prediCtPZCttYMvm2W3PtxmMxLmT1dtN7riU6Cxh6tM"); // mainnet
+pub const USDC_MINT_ID: Address = address!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"); // mainnet
+pub const WSOL_MINT_ID: Address = address!("So11111111111111111111111111111111111111112"); // mainnet
 
-pub const MINT_WHITELIST: [Pubkey; 2] = [USDC_MINT_ID, WSOL_MINT_ID];
+pub const MINT_WHITELIST: [Address; 2] = [USDC_MINT_ID, WSOL_MINT_ID];
 
 pub const DISCRIMINATOR_SIZE: usize = 8;
 pub const WORLD_MARKET_SIZE: usize = 320;

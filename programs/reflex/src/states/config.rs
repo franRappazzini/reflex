@@ -2,12 +2,12 @@ use anchor_lang::prelude::*;
 
 use crate::DISCRIMINATOR_SIZE;
 
-#[account]
+#[account(borsh)]
 #[derive(InitSpace)]
 pub struct Config {
-    pub authority: Pubkey,
     pub fee_bps: u16,
     pub briber_fee_bps: u16,
+    pub authority: Address,
     pub bump: u8,
 }
 
