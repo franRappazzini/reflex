@@ -32,7 +32,12 @@ fn test_reflex_lifecycle() {
     stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT).expect("initial YES stake failed");
     stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT).expect("initial NO stake failed");
 
-    advance_time(7);
+    let mut now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as i64;
+
+    advance_time(&mut now, 7);
 
     add_incentives::run(
         &ctx,
@@ -52,14 +57,14 @@ fn test_reflex_lifecycle() {
 
     assert_pool_and_position(&ctx, &pool);
 
-    advance_time(7);
+    advance_time(&mut now, 7);
 
     unstake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT / 2)
         .expect("unstake outcome YES failed");
 
     assert_after_unstake(&ctx, &pool);
 
-    advance_time(7);
+    advance_time(&mut now, 7);
     settle_pool::run(&ctx, reflex::PoolStatus::Yes);
 
     collect_fees::run(&ctx, &ctx.accounts.creator, &pool.yes);
@@ -220,13 +225,12 @@ fn token_balance(ctx: &TestContext, address: &solana_pubkey::Pubkey) -> u64 {
     token_amount(&account.owner, &account.data)
 }
 
-fn advance_time(days: i64) {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as i64;
+fn advance_time(now: &mut i64, days: i64) {
+    *now = now
+        .checked_add(days * SECONDS_PER_DAY as i64 * 1_000)
+        .unwrap();
 
-    let absolute_timestamp = now + (days * SECONDS_PER_DAY as i64 * 1_000);
+    let absolute_timestamp = now;
 
     let client = Client::new();
     let rpc_url = "http://127.0.0.1:8899";
