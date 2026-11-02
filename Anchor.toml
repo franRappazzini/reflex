@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-reflex = "HQqk2aUfK95RFvwwQn3C1cP4cev18U9mWMW4nC35xJj1"
+reflex = "reft5Z5DKR1ie3KGvLmfCSG7YEuA3vh6dfxxVx2qcEm"
 
 [provider]
-cluster = "localnet"
+cluster = "mainnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
