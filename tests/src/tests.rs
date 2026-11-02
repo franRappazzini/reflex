@@ -28,6 +28,12 @@ fn test_reflex_lifecycle() {
     assert_initialized(&ctx);
 
     let pool = create_pool::run(&ctx);
+    add_incentives::run(
+        &ctx,
+        &ctx.accounts.creator,
+        &pool.incentive,
+        INITIAL_POOL_FUNDING_AMOUNT,
+    );
     assert_funder(&ctx, &ctx.accounts.creator, INITIAL_POOL_FUNDING_AMOUNT);
     stake_outcome::run(&ctx, &pool.yes, INITIAL_STAKE_AMOUNT).expect("initial YES stake failed");
     stake_outcome::run(&ctx, &pool.no, INITIAL_STAKE_AMOUNT).expect("initial NO stake failed");
@@ -96,7 +102,12 @@ fn assert_funder(ctx: &TestContext, funder: &solana_keypair::Keypair, expected_a
 
 fn assert_funder_weights(ctx: &TestContext) {
     let pool: reflex::Pool = fetch_account(ctx, &ctx.pdas.pool);
-    let creator_funder: reflex::Funder = fetch_account(ctx, &ctx.pdas.funder);
+    let creator_funder_pda = derive_funder_pda(
+        &ctx.program.id(),
+        &ctx.pdas.pool,
+        &ctx.accounts.creator.pubkey(),
+    );
+    let creator_funder: reflex::Funder = fetch_account(ctx, &creator_funder_pda);
     let staker_funder_pda = derive_funder_pda(
         &ctx.program.id(),
         &ctx.pdas.pool,
@@ -144,7 +155,7 @@ fn assert_pool_and_position(ctx: &TestContext, setup: &PoolSetup) {
     let initial_net_stake = net_stake(INITIAL_STAKE_AMOUNT, pool.fee_bps);
     let additional_net_stake = net_stake(INITIAL_STAKE_AMOUNT / 2, pool.fee_bps);
 
-    assert_eq!(pool.creator, ctx.accounts.creator.pubkey());
+    assert_eq!(pool.creator, ctx.accounts.authority.pubkey());
     assert_eq!(pool.incentive_mint, setup.incentive.mint);
     assert_eq!(pool.yes_outcome_mint, setup.yes.mint);
     assert_eq!(pool.no_outcome_mint, setup.no.mint);

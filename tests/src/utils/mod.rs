@@ -297,6 +297,7 @@ pub fn setup() -> TestContext {
     );
 
     let staker_funder = derive_funder_pda(&PROGRAM_ID, &pdas.pool, &accounts.staker.pubkey());
+    let authority_funder = derive_funder_pda(&PROGRAM_ID, &pdas.pool, &accounts.authority.pubkey());
     for address in [
         pdas.config,
         pdas.pool,
@@ -304,6 +305,7 @@ pub fn setup() -> TestContext {
         pdas.position,
         pdas.funder,
         staker_funder,
+        authority_funder,
     ] {
         reset_test_account(&address);
     }

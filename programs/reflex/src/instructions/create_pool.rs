@@ -14,7 +14,8 @@ pub struct CreatePool {
 
     #[account(
         seeds = [CONFIG_SEED],
-        bump = config.bump
+        bump = config.bump,
+        constraint = config.authority == *signer.address() @ ReflexError::Unauthorized
     )]
     pub config: Box<BorshAccount<Config>>,
 
@@ -99,7 +100,6 @@ pub struct CreatePool {
 
 impl CreatePool {
     pub fn proccess_ix(&mut self, amount: u64, bumps: &CreatePoolBumps) -> Result<()> {
-        require!(amount > 0, ReflexError::InvalidAmount);
         require!(
             MINT_WHITELIST.contains(&self.mint.address()),
             ReflexError::WrongMint
@@ -132,57 +132,26 @@ impl CreatePool {
             ReflexError::WrongMint
         );
 
-        // transfer incentives to vault
-        let cpi_accounts = token_interface::TransferChecked {
-            authority: self.signer.to_cpi_handle(),
-            from: self.signer_ata.to_cpi_handle_mut(),
-            mint: self.mint.to_cpi_handle(),
-            to: self.pool_vault.to_cpi_handle_mut(),
-        };
+        if amount > 0 {
+            let cpi_accounts = token_interface::TransferChecked {
+                authority: self.signer.to_cpi_handle(),
+                from: self.signer_ata.to_cpi_handle_mut(),
+                mint: self.mint.to_cpi_handle(),
+                to: self.pool_vault.to_cpi_handle_mut(),
+            };
 
-        let cpi_ctx = CpiContext::new(self.spl_token_program.address(), cpi_accounts);
+            let cpi_ctx = CpiContext::new(self.spl_token_program.address(), cpi_accounts);
 
-        token_interface::transfer_checked(cpi_ctx, amount, self.mint.decimals())?;
+            token_interface::transfer_checked(cpi_ctx, amount, self.mint.decimals())?;
+        }
 
         // set funder and pool account
         let now = Clock::get()?.unix_timestamp;
-
-        // self.funder.set_inner(Funder {
-        //     weight_seconds: 0,
-        //     amount,
-        //     last_update_ts: now,
-        //     funder: *self.signer.key,
-        //     bump: bumps.funder,
-        // });
 
         self.funder.amount = amount;
         self.funder.last_update_ts = now;
         self.funder.funder = *self.signer.address();
         self.funder.bump = bumps.funder;
-
-        // self.pool.set_inner(Pool {
-        //     creator: *self.signer.key,
-        //     incentive_mint: self.mint.address(),
-        //     yes_outcome_mint,
-        //     no_outcome_mint,
-        //     total_incentive_amount: amount,
-        //     total_yes_staked: 0,
-        //     total_no_staked: 0,
-        //     available_yes_fees: 0,
-        //     available_no_fees: 0,
-        //     creation_timestamp: now,
-        //     resolution_timestamp: 0,
-        //     yes_last_update_ts: now,
-        //     yes_stake_seconds: 0,
-        //     no_last_update_ts: now,
-        //     no_stake_seconds: 0,
-        //     funder_last_update_ts: now,
-        //     funder_weight_seconds: 0,
-        //     fee_bps: self.config.fee_bps,
-        //     status: crate::PoolStatus::Open,
-        //     vault_bump: bumps.pool_vault,
-        //     bump: bumps.pool,
-        // });
 
         self.pool.creator = *self.signer.address();
         self.pool.incentive_mint = *self.mint.address();

@@ -31,13 +31,13 @@ integration tests, and Surfpool deployment runbooks.
 | Instruction                           | Purpose                                                                                                           |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `initialize(fee_bps, briber_fee_bps)` | Creates the global configuration PDA and sets its authority and fee parameters.                                   |
-| `create_pool(amount)`                 | Creates a pool for a market, initializes its token vaults, and deposits the initial incentive amount.             |
-| `add_incentives(amount)`              | Adds tokens to an existing pool's incentive vault. Currently callable by the pool creator.                        |
+| `create_pool(amount)`                 | Creates a pool for a market and initializes its token vaults. Only the configured program authority can create pools; use `amount = 0` to create without initial incentives. |
+| `add_incentives(amount)`              | Adds tokens to an existing pool's incentive vault. Anyone can contribute incentives to an open pool.               |
 | `stake_outcome(amount)`               | Stakes YES or NO outcome tokens while the pool is open and begins accumulating stake-time for that side.          |
 | `unstake_outcome(amount)`             | Withdraws staked outcome tokens while the pool is open.                                                           |
 | `settle_pool(decision)`               | Records the market outcome and freezes the stake-time accumulators. Restricted to the configured authority.       |
 | `claim_rewards()`                     | Lets a position on the winning side claim its staked outcome tokens and stake-time-proportional incentive payout. |
-| `collect_fees()`                      | Lets the pool creator collect fees for the winning side after settlement.                                         |
+| `collect_fees()`                      | Lets incentive funders collect fees for the winning side after settlement.                                        |
 
 ### On-chain accounts
 
